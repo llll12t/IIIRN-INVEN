@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Borrow Devices</title>
+  <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+
+  <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-xl font-bold mb-4">Borrow Devices</h1>
+
+    <input id="deviceIdInput" type="text" placeholder="Scan or enter Device ID" class="w-full p-2 border rounded mb-4">
+    <button onclick="scanQRCode()" class="w-full bg-purple-500 text-white p-2 rounded mb-4">📷 Scan QR Code</button>
+
+    <button onclick="addDevice()" class="w-full bg-blue-500 text-white p-2 rounded mb-4">Add Device</button>
+
+    <ul id="deviceList" class="mb-4"></ul>
+
+    <input id="borrowerName" type="text" placeholder="Your Name" class="w-full p-2 border rounded mb-4">
+    <button onclick="submitBorrow()" class="w-full bg-green-500 text-white p-2 rounded">Submit Borrow</button>
+  </div>
+
+  <script>
+    let devices = [];
+    let userId = '';
+
+    window.onload = async () => {
+      await liff.init({ liffId: 'YOUR_LIFF_ID' }); // <<< เปลี่ยน YOUR_LIFF_ID เป็นของคุณ
+      if (!liff.isLoggedIn()) {
+        liff.login();
+      } else {
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+      }
+    };
+        async function scanQRCode() {
+    try {
+        const result = await liff.scanCode();
+        const scannedValue = result.value;
+        document.getElementById('deviceIdInput').value = scannedValue;
+    } catch (error) {
+        alert('Failed to scan QR Code: ' + error);
+    }
+    }
+
+    async function addDevice() {
+      const deviceId = document.getElementById('deviceIdInput').value.trim();
+      if (!deviceId) return alert('Please enter Device ID');
+
+      const res = await fetch(`https://script.google.com/macros/s/AKfycbxs6U7XBoAd8fTfImxukTLIBQ3drIhbJcIaRM7DXIG-DrXfvbr9zxXy-lNJJIwtOSUC/exec?method=getDevice&deviceId=${deviceId}`); // <<< เปลี่ยน DEPLOY_ID เป็นของคุณ
+      const device = await res.json();
+
+      if (device.deviceId) {
+        devices.push(device);
+        renderList();
+        document.getElementById('deviceIdInput').value = '';
+      } else {
+        alert('Device not found');
+      }
+    }
+
+    function renderList() {
+      const ul = document.getElementById('deviceList');
+      ul.innerHTML = '';
+      devices.forEach((d, index) => {
+        const li = document.createElement('li');
+        li.className = "border-b p-2 flex justify-between items-center";
+        li.innerHTML = `${d.deviceId} - ${d.deviceName} <button onclick="removeDevice(${index})" class="text-red-500">X</button>`;
+        ul.appendChild(li);
+      });
+    }
+
+    function removeDevice(index) {
+      devices.splice(index, 1);
+      renderList();
+    }
+
+    async function submitBorrow() {
+      const borrowerName = document.getElementById('borrowerName').value.trim();
+      if (!borrowerName || devices.length === 0) return alert('Fill name and add at least one device.');
+
+      const borrowList = devices.map(d => ({
+        deviceId: d.deviceId,
+        deviceName: d.deviceName,
+        borrowerName,
+        userId
+      }));
+
+      const res = await fetch(`https://script.google.com/macros/s/AKfycbxs6U7XBoAd8fTfImxukTLIBQ3drIhbJcIaRM7DXIG-DrXfvbr9zxXy-lNJJIwtOSUC/exec?method=borrow`, {
+        method: 'POST',
+        body: JSON.stringify(borrowList),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (await res.text() === 'success') {
+        alert('Borrow saved successfully!');
+        devices = [];
+        renderList();
+        document.getElementById('borrowerName').value = '';
+      } else {
+        alert('Failed to save borrow');
+      }
+    }
+  </script>
+
+</body>
+</html>
