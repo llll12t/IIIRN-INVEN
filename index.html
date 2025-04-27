@@ -14,7 +14,7 @@
 <div class="bg-white p-6 rounded shadow w-full max-w-md text-center">
   <h1 class="text-2xl font-bold mb-4">📦 Borrow Devices</h1>
 
-  <button onclick="scanQRCode()" class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
+  <button onclick="scanCodeV2()" class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
     📷 Scan QR Code
   </button>
   <button onclick="scanCodeV2()">QR Code Reader</button>
@@ -43,9 +43,9 @@
     renderBasket();
   };
 
-  async function scanQRCode() {
+  async function scanCodeV2() {
     try {
-      const result = await liff.scanCode();
+      const result = await liff.scanCodeV2();
       const scannedValue = result.value;
       await addDeviceToBasket(scannedValue);
     } catch (error) {
@@ -54,14 +54,7 @@
     }
   }
 
-  async function scanCodeV2() {
-      try {
-        const result = await liff.scanCodeV2();
-        document.querySelector('#result').innerHTML = result.value;
-      } catch(error) {
-        console.log('scanCodeV2', error);
-      }
-    }
+
 
   async function addDeviceToBasket(deviceId) {
     try {
