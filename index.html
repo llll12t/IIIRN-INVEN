@@ -43,7 +43,7 @@
 
   async function scanCodeV2() {
     try {
-      const result = await liff.scanCode();
+      const result = await liff.scanCodeV2();
       const scannedValue = result.value;
       await addDeviceToBasket(scannedValue);
     } catch (error) {
