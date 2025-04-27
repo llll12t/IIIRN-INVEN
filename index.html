@@ -30,16 +30,20 @@
   let basket = [];
   let userId = '';
 
-  window.onload = async () => {
-    await liff.init({ liffId: '2007335399-deQzG3E7' });
-    if (!liff.isLoggedIn()) {
-      liff.login();
-    } else {
-      const profile = await liff.getProfile();
-      userId = profile.userId;
-    }
-    renderBasket();
-  };
+window.onload = async () => {
+  await liff.init({ liffId: '2007335399-deQzG3E7' });
+
+  if (!liff.isLoggedIn()) {
+    liff.login({
+      scope: ['profile', 'openid', 'scan'],
+      redirectUri: window.location.href
+    });
+  } else {
+    const profile = await liff.getProfile();
+    userId = profile.userId;
+  }
+  renderBasket();
+};
 
   async function scanCodeV2() {
     try {
