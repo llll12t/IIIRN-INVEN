@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>Borrow Devices</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -12,73 +13,79 @@
     <h1 class="text-2xl font-bold mb-4">📦 Borrow Devices</h1>
 
     <!-- ปุ่มสแกน -->
-    <button onclick="scanCodeV2()" class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
+    <button onclick="scanCodeV2()" 
+            class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
       📷 Scan QR Code
     </button>
 
-    <!-- วิดีโอสำหรับสแกน -->
-    <video id="video" class="w-full mb-4 rounded" style="display:none;"></video>
-    <div id="scannerMessage" class="text-sm text-blue-500 mb-2"></div>
+    <!-- ซ่อน input เปิดกล้อง/เลือกไฟล์ -->
+    <input id="file-input" 
+           type="file" 
+           accept="image/*" 
+           capture="environment" 
+           style="display:none"/>
 
+    <div id="loadingMessage" class="text-sm text-blue-500 mb-2"></div>
     <div id="basketList" class="text-gray-700 mb-4"></div>
 
-    <input id="borrowerName" type="text" placeholder="Your Name" class="border rounded w-full p-2 mb-4">
-    <button onclick="submitBasket()" class="bg-green-500 text-white px-6 py-3 rounded w-full">
+    <input id="borrowerName" 
+           type="text" 
+           placeholder="Your Name" 
+           class="border rounded w-full p-2 mb-4"/>
+
+    <button onclick="submitBasket()" 
+            class="bg-green-500 text-white px-6 py-3 rounded w-full">
       ✅ Submit Borrow
     </button>
   </div>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxEdiFTpzQC4R6TdsRPqUJp3o-xSIhLUaIzD4yWqwh7_WlgAyvDOFWPRYAiNgLxTvDw/exec'; 
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxEdiFTpzQC4R6TdsRPqUJp3o-xSIhLUaIzD4yWqwh7_WlgAyvDOFWPRYAiNgLxTvDw/exec';
     let basket = [];
-    let userId = ''; // ถ้ามี ใช้เก็บ userId ต่อ
+    let userId = ''; // ถ้ามี userId ให้ใส่ตรงนี้
 
-    async function scanCodeV2() {
-      if (!('BarcodeDetector' in window)) {
-        return alert('เบราว์เซอร์ไม่รองรับ BarcodeDetector API');
-      }
-      const video = document.getElementById('video');
-      const msg   = document.getElementById('scannerMessage');
-      msg.innerText = '🔄 กำลังเปิดกล้อง...';
-      video.style.display = 'block';
+    const fileInput = document.getElementById('file-input');
+    fileInput.addEventListener('change', handleFile, false);
 
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = stream;
-        await video.play();
-      } catch (e) {
-        console.error(e);
-        msg.innerText = '';
-        alert('ไม่สามารถเปิดกล้องได้: ' + e.message);
-        return;
-      }
+    function scanCodeV2() {
+      document.getElementById('loadingMessage').innerText = '';
+      fileInput.value = null;  // รีเซ็ตไฟล์เดิม
+      fileInput.click();
+    }
 
-      const detector = new BarcodeDetector({ formats: ['qr_code'] });
-      msg.innerText = '📡 สแกน QR Code...';
+    function handleFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      document.getElementById('loadingMessage').innerText = '📸 กำลังอ่านภาพ...';
 
-      const scanLoop = async () => {
-        try {
-          const barcodes = await detector.detect(video);
-          if (barcodes.length) {
-            const code = barcodes[0].rawValue;
-            // หยุดกล้อง
-            stream.getTracks().forEach(t => t.stop());
-            video.style.display = 'none';
-            msg.innerText = '';
-            addDeviceToBasket(code);
-            return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          ctx.drawImage(img, 0, 0);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+          document.getElementById('loadingMessage').innerText = '';
+
+          if (code && code.data) {
+            addDeviceToBasket(code.data.trim());
+          } else {
+            alert('ไม่พบ QR Code ในภาพ กรุณาลองใหม่');
           }
-        } catch (err) {
-          console.warn(err);
-        }
-        requestAnimationFrame(scanLoop);
+        };
+        img.src = reader.result;
       };
-      scanLoop();
+      reader.readAsDataURL(file);
     }
 
     async function addDeviceToBasket(deviceId) {
-      document.getElementById('scannerMessage').innerText = '🔎 กำลังค้นหาอุปกรณ์...';
+      document.getElementById('loadingMessage').innerText = '🔎 กำลังค้นหาอุปกรณ์...';
       try {
         const res = await fetch(`${API_URL}?method=getDevice&deviceId=${encodeURIComponent(deviceId)}`);
         const device = await res.json();
@@ -92,7 +99,7 @@
         console.error(error);
         alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message);
       } finally {
-        document.getElementById('scannerMessage').innerText = '';
+        document.getElementById('loadingMessage').innerText = '';
       }
     }
 
@@ -103,7 +110,7 @@
         return;
       }
       let html = '<ul class="text-left">';
-      basket.forEach((d,i) => {
+      basket.forEach((d, i) => {
         html += `
           <li class="flex justify-between items-center border-b py-2">
             ${d.deviceId} - ${d.deviceName}
@@ -115,7 +122,7 @@
     }
 
     function removeFromBasket(idx) {
-      basket.splice(idx,1);
+      basket.splice(idx, 1);
       renderBasket();
     }
 
