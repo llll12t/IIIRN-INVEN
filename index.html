@@ -3,29 +3,34 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
-  <title>Borrow Devices</title>
+  <title>Borrow Devices (Live Scan)</title>
+
+  <!-- jsQR สำหรับ decode QR จาก canvas -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    #video {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 0.5rem;
+      display: none;
+    }
+  </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-
   <div class="bg-white p-6 rounded shadow w-full max-w-md text-center">
     <h1 class="text-2xl font-bold mb-4">📦 Borrow Devices</h1>
 
-    <!-- ปุ่มสแกน -->
-    <button onclick="scanCodeV2()" 
+    <button onclick="startScan()" 
             class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
-      📷 Scan QR Code
+      📷 Live Scan QR Code
     </button>
 
-    <!-- ซ่อน input เปิดกล้อง/เลือกไฟล์ -->
-    <input id="file-input" 
-           type="file" 
-           accept="image/*" 
-           capture="environment" 
-           style="display:none"/>
+    <!-- video element สำหรับโชว์กล้อง -->
+    <video id="video" playsinline></video>
 
-    <div id="loadingMessage" class="text-sm text-blue-500 mb-2"></div>
+    <div id="message" class="text-sm text-blue-500 my-2"></div>
     <div id="basketList" class="text-gray-700 mb-4"></div>
 
     <input id="borrowerName" 
@@ -42,52 +47,65 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxEdiFTpzQC4R6TdsRPqUJp3o-xSIhLUaIzD4yWqwh7_WlgAyvDOFWPRYAiNgLxTvDw/exec';
     let basket = [];
-    let userId = ''; // ถ้ามี userId ให้ใส่ตรงนี้
+    let _stream = null;
 
-    const fileInput = document.getElementById('file-input');
-    fileInput.addEventListener('change', handleFile, false);
+    async function startScan() {
+      const video   = document.getElementById('video');
+      const message = document.getElementById('message');
+      message.innerText = '🔄 เปิดกล้อง สแกน QR Code...';
+      video.style.display = 'block';
 
-    function scanCodeV2() {
-      document.getElementById('loadingMessage').innerText = '';
-      fileInput.value = null;  // รีเซ็ตไฟล์เดิม
-      fileInput.click();
+      try {
+        _stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        video.srcObject = _stream;
+        video.play();
+        requestAnimationFrame(tick);
+      } catch (err) {
+        console.error(err);
+        message.innerText = '';
+        alert('ไม่สามารถเปิดกล้องได้: ' + err.message);
+      }
     }
 
-    function handleFile(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      document.getElementById('loadingMessage').innerText = '📸 กำลังอ่านภาพ...';
+    function stopScan() {
+      const video = document.getElementById('video');
+      video.pause();
+      video.style.display = 'none';
+      if (_stream) {
+        _stream.getTracks().forEach(t => t.stop());
+        _stream = null;
+      }
+      document.getElementById('message').innerText = '';
+    }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          ctx.drawImage(img, 0, 0);
+    function tick() {
+      const video = document.getElementById('video');
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        // วาดลง canvas แล้วสแกน
+        const canvas = document.createElement('canvas');
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
 
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-          document.getElementById('loadingMessage').innerText = '';
-
-          if (code && code.data) {
-            addDeviceToBasket(code.data.trim());
-          } else {
-            alert('ไม่พบ QR Code ในภาพ กรุณาลองใหม่');
-          }
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
+        if (code && code.data) {
+          stopScan();
+          addDeviceToBasket(code.data.trim());
+          return;
+        }
+      }
+      requestAnimationFrame(tick);
     }
 
     async function addDeviceToBasket(deviceId) {
-      document.getElementById('loadingMessage').innerText = '🔎 กำลังค้นหาอุปกรณ์...';
+      const message = document.getElementById('message');
+      message.innerText = '🔎 กำลังค้นหาอุปกรณ์...';
       try {
-        const res = await fetch(`${API_URL}?method=getDevice&deviceId=${encodeURIComponent(deviceId)}`);
+        const res    = await fetch(`${API_URL}?method=getDevice&deviceId=${encodeURIComponent(deviceId)}`);
         const device = await res.json();
         if (device.deviceId) {
           basket.push(device);
@@ -95,11 +113,11 @@
         } else {
           alert('ไม่พบข้อมูลอุปกรณ์นี้');
         }
-      } catch (error) {
-        console.error(error);
-        alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message);
+      } catch (err) {
+        console.error(err);
+        alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
       } finally {
-        document.getElementById('loadingMessage').innerText = '';
+        message.innerText = '';
       }
     }
 
@@ -110,7 +128,7 @@
         return;
       }
       let html = '<ul class="text-left">';
-      basket.forEach((d, i) => {
+      basket.forEach((d,i) => {
         html += `
           <li class="flex justify-between items-center border-b py-2">
             ${d.deviceId} - ${d.deviceName}
@@ -135,18 +153,18 @@
         deviceId: d.deviceId,
         deviceName: d.deviceName,
         borrowerName,
-        userId
+        userId: ''  // ถ้ามี userId ใส่ตรงนี้
       }));
 
       try {
-        const res = await fetch(`${API_URL}?method=borrow`, {
+        const res  = await fetch(`${API_URL}?method=borrow`, {
           method: 'POST',
-          headers: { 'Content-Type':'application/json' },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(borrowList)
         });
         const text = await res.text();
         if (text === 'success') {
-          alert('บันทึกการยืมเรียบร้อยแล้ว!');
+          alert('บันทึกการยืมเรียบร้อย!');
           basket = [];
           renderBasket();
           document.getElementById('borrowerName').value = '';
