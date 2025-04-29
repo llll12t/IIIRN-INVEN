@@ -1,61 +1,55 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ยืมคืนอุปกรณ์ (LIFF)</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ยืมคืนอุปกรณ์</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .hidden { display: none; }
-    #video { width: 100%; max-width: 400px; border-radius: 0.5rem; display: none; }
+    #video { display: none; width: 100%; max-width: 400px; border-radius: 0.5rem; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-<!-- หน้าแรก -->
-<div id="homePage" class="bg-white p-6 rounded shadow w-full max-w-md text-center">
-  <div class="mb-4">
-    <img src="https://via.placeholder.com/100" class="mx-auto rounded-full mb-2" />
-    <h1 id="displayName" class="text-xl font-bold mb-1">ชื่อผู้ใช้</h1>
-    <p id="userId" class="text-gray-500 text-sm">UserID</p>
-  </div>
+<!-- หน้า Home -->
+<div id="homePage" class="bg-white p-6 rounded shadow max-w-md w-full text-center">
+  <h1 id="displayName" class="text-xl font-bold mb-1">-</h1>
+  <p id="userId" class="text-gray-500 text-sm">userId</p>
 
-  <div class="flex gap-4 mb-4">
+  <div class="flex gap-4 my-4">
     <button onclick="showPage('borrow')" class="bg-blue-500 text-white px-4 py-2 rounded w-full">ยืมอุปกรณ์</button>
     <button onclick="showPage('return')" class="bg-yellow-500 text-white px-4 py-2 rounded w-full">คืนอุปกรณ์</button>
   </div>
 
-  <div>
-    <h2 class="text-lg font-bold mb-2">📋 รายการที่ยืม</h2>
-    <table class="w-full text-sm border">
-      <thead>
-        <tr class="bg-gray-200">
-          <th class="border px-2 py-1">ลำดับ</th>
-          <th class="border px-2 py-1">ชื่อ</th>
-        </tr>
-      </thead>
-      <tbody id="borrowList"></tbody>
-    </table>
-  </div>
+  <h2 class="text-lg font-bold mb-2">📋 รายการที่กำลังยืม</h2>
+  <table class="w-full text-sm border">
+    <thead><tr class="bg-gray-200">
+      <th class="border px-2 py-1">รหัส</th>
+      <th class="border px-2 py-1">ชื่อ</th>
+    </tr></thead>
+    <tbody id="borrowList"></tbody>
+  </table>
 </div>
 
-<!-- หน้ายืมอุปกรณ์ -->
-<div id="borrowPage" class="hidden bg-white p-6 rounded shadow w-full max-w-md text-center">
+<!-- หน้ายืม -->
+<div id="borrowPage" class="hidden bg-white p-6 rounded shadow max-w-md w-full text-center">
   <button onclick="showPage('home')" class="text-sm text-gray-500 underline mb-4">🔙 กลับ</button>
   <h2 class="text-lg font-bold mb-2">ยืมอุปกรณ์</h2>
-  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-4">📷 Live Scan QR</button>
+  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
   <video id="video" playsinline></video>
   <ul id="basketList" class="text-left text-sm mt-4"></ul>
   <button onclick="submit('borrow')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
 </div>
 
-<!-- หน้าคืนอุปกรณ์ -->
-<div id="returnPage" class="hidden bg-white p-6 rounded shadow w-full max-w-md text-center">
+<!-- หน้าคืน -->
+<div id="returnPage" class="hidden bg-white p-6 rounded shadow max-w-md w-full text-center">
   <button onclick="showPage('home')" class="text-sm text-gray-500 underline mb-4">🔙 กลับ</button>
   <h2 class="text-lg font-bold mb-2">คืนอุปกรณ์</h2>
-  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-4">📷 Live Scan QR</button>
+  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
   <video id="videoReturn" playsinline></video>
   <ul id="basketListReturn" class="text-left text-sm mt-4"></ul>
   <button onclick="submit('return')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
@@ -83,7 +77,7 @@ window.onload = async () => {
     userName = data.name;
     document.getElementById('displayName').textContent = userName;
   } else {
-    userName = prompt("กรุณากรอกชื่อ");
+    userName = prompt("ไม่พบชื่อในระบบ กรุณากรอกชื่อ:");
     document.getElementById('displayName').textContent = userName;
   }
 
@@ -96,16 +90,16 @@ function showPage(page) {
   document.getElementById('returnPage').classList.add('hidden');
   if (page === 'home') document.getElementById('homePage').classList.remove('hidden');
   if (page === 'borrow') {
-    document.getElementById('borrowPage').classList.remove('hidden');
     currentMode = 'borrow';
     basket = [];
     renderBasket();
+    document.getElementById('borrowPage').classList.remove('hidden');
   }
   if (page === 'return') {
-    document.getElementById('returnPage').classList.remove('hidden');
     currentMode = 'return';
     basket = [];
     renderBasket();
+    document.getElementById('returnPage').classList.remove('hidden');
   }
 }
 
@@ -114,7 +108,7 @@ async function loadBorrowedList() {
   const data = await res.json();
   const list = document.getElementById('borrowList');
   list.innerHTML = "";
-  data.forEach((item, idx) => {
+  data.forEach(item => {
     list.innerHTML += `<tr><td class="border px-2">${item.deviceId}</td><td class="border px-2">${item.deviceName}</td></tr>`;
   });
 }
@@ -152,10 +146,10 @@ async function tick(video, stream) {
       const id = code.data.trim();
       const res = await fetch(`${API_URL}?method=getDevice&deviceId=${id}`);
       const device = await res.json();
-      if (!device.deviceId) return alert('ไม่พบอุปกรณ์');
+      if (!device.deviceId) return alert("ไม่พบอุปกรณ์");
 
       if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน') {
-        alert('อุปกรณ์นี้ถูกยืมอยู่แล้ว');
+        alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
         return;
       }
 
@@ -178,8 +172,8 @@ function renderBasket() {
   });
 }
 
-function removeFromBasket(idx) {
-  basket.splice(idx, 1);
+function removeFromBasket(i) {
+  basket.splice(i, 1);
   renderBasket();
 }
 
@@ -209,6 +203,5 @@ async function submit(action) {
   }
 }
 </script>
-
 </body>
 </html>
