@@ -76,7 +76,6 @@ window.onload = async () => {
   const profile = await liff.getProfile();
   userId = profile.userId;
   document.getElementById('userId').textContent = userId;
-  document.getElementById('userlineid').value = userId; // เก็บค่า user ID
   document.getElementById('displayName').value = profile.displayName;
   document.getElementById('profileImage').src = profile.pictureUrl || 'https://via.placeholder.com/40?text=PROFILE';
 
