@@ -1,47 +1,75 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ระบบยืมคืนอุปกรณ์</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ยืมคืนอุปกรณ์ (LIFF)</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    #video { display: none; width: 100%; max-width: 400px; border-radius: 0.5rem; }
+    .hidden { display: none; }
+    #video { width: 100%; max-width: 400px; border-radius: 0.5rem; display: none; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
-<div class="bg-white p-6 rounded shadow max-w-md w-full text-center">
-  <h1 class="text-xl font-bold mb-2">📦 ระบบยืม/คืน อุปกรณ์</h1>
+<!-- หน้าแรก -->
+<div id="homePage" class="bg-white p-6 rounded shadow w-full max-w-md text-center">
   <div class="mb-4">
-    <p class="text-sm text-gray-600">UserID: <span id="userId">-</span></p>
-    <p class="text-sm text-gray-600">ชื่อ: <span id="userName">-</span></p>
-    <input id="manualName" placeholder="กรอกชื่อหากไม่พบในระบบ" class="border mt-2 p-1 w-full rounded hidden"/>
+    <img src="https://via.placeholder.com/100" class="mx-auto rounded-full mb-2" />
+    <h1 id="displayName" class="text-xl font-bold mb-1">ชื่อผู้ใช้</h1>
+    <p id="userId" class="text-gray-500 text-sm">UserID</p>
   </div>
 
-  <div class="flex gap-2 mb-4">
-    <button onclick="setMode('borrow')" class="bg-blue-500 text-white px-4 py-2 rounded w-full">ยืม</button>
-    <button onclick="setMode('return')" class="bg-yellow-500 text-white px-4 py-2 rounded w-full">คืน</button>
+  <div class="flex gap-4 mb-4">
+    <button onclick="showPage('borrow')" class="bg-blue-500 text-white px-4 py-2 rounded w-full">ยืมอุปกรณ์</button>
+    <button onclick="showPage('return')" class="bg-yellow-500 text-white px-4 py-2 rounded w-full">คืนอุปกรณ์</button>
   </div>
 
+  <div>
+    <h2 class="text-lg font-bold mb-2">📋 รายการที่ยืม</h2>
+    <table class="w-full text-sm border">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="border px-2 py-1">ลำดับ</th>
+          <th class="border px-2 py-1">ชื่อ</th>
+        </tr>
+      </thead>
+      <tbody id="borrowList"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- หน้ายืมอุปกรณ์ -->
+<div id="borrowPage" class="hidden bg-white p-6 rounded shadow w-full max-w-md text-center">
+  <button onclick="showPage('home')" class="text-sm text-gray-500 underline mb-4">🔙 กลับ</button>
+  <h2 class="text-lg font-bold mb-2">ยืมอุปกรณ์</h2>
+  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-4">📷 Live Scan QR</button>
   <video id="video" playsinline></video>
-  <div class="text-sm text-blue-500 my-2" id="message"></div>
-  <ul id="basketList" class="text-left text-sm"></ul>
+  <ul id="basketList" class="text-left text-sm mt-4"></ul>
+  <button onclick="submit('borrow')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
+</div>
 
-  <button onclick="submit()" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ บันทึก</button>
+<!-- หน้าคืนอุปกรณ์ -->
+<div id="returnPage" class="hidden bg-white p-6 rounded shadow w-full max-w-md text-center">
+  <button onclick="showPage('home')" class="text-sm text-gray-500 underline mb-4">🔙 กลับ</button>
+  <h2 class="text-lg font-bold mb-2">คืนอุปกรณ์</h2>
+  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-4">📷 Live Scan QR</button>
+  <video id="videoReturn" playsinline></video>
+  <ul id="basketListReturn" class="text-left text-sm mt-4"></ul>
+  <button onclick="submit('return')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
 </div>
 
 <script>
+
 const API_URL = 'https://script.google.com/macros/s/AKfycbwijQzkvwZx4ucNi3n2gCg8brSECV1UxGS7ZR1nAsdpHmYGkCN6hrJyoeuxGsQxEqE5/exec';
 const LIFF_ID = '2007335399-deQzG3E7';
 
-let userId = '';
-let userName = '';
+let userId = "";
+let userName = "";
 let basket = [];
-let mode = ''; // 'borrow' หรือ 'return'
-let stream = null;
+let currentMode = "";
 
 window.onload = async () => {
   await liff.init({ liffId: LIFF_ID });
@@ -49,36 +77,59 @@ window.onload = async () => {
   userId = profile.userId;
   document.getElementById('userId').textContent = userId;
 
-  // หา userName จากชีตพนักงาน
   const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
   const data = await res.json();
   if (data.found) {
     userName = data.name;
-    document.getElementById('userName').textContent = userName;
+    document.getElementById('displayName').textContent = userName;
   } else {
-    document.getElementById('manualName').classList.remove('hidden');
-    document.getElementById('userName').textContent = '(กรุณากรอกชื่อ)';
+    userName = prompt("กรุณากรอกชื่อ");
+    document.getElementById('displayName').textContent = userName;
   }
+
+  loadBorrowedList();
 };
 
-function setMode(m) {
-  mode = m;
-  basket = [];
-  renderBasket();
-  startScan();
+function showPage(page) {
+  document.getElementById('homePage').classList.add('hidden');
+  document.getElementById('borrowPage').classList.add('hidden');
+  document.getElementById('returnPage').classList.add('hidden');
+  if (page === 'home') document.getElementById('homePage').classList.remove('hidden');
+  if (page === 'borrow') {
+    document.getElementById('borrowPage').classList.remove('hidden');
+    currentMode = 'borrow';
+    basket = [];
+    renderBasket();
+  }
+  if (page === 'return') {
+    document.getElementById('returnPage').classList.remove('hidden');
+    currentMode = 'return';
+    basket = [];
+    renderBasket();
+  }
+}
+
+async function loadBorrowedList() {
+  const res = await fetch(`${API_URL}?method=getUserBorrow&userId=${userId}`);
+  const data = await res.json();
+  const list = document.getElementById('borrowList');
+  list.innerHTML = "";
+  data.forEach((item, idx) => {
+    list.innerHTML += `<tr><td class="border px-2">${item.deviceId}</td><td class="border px-2">${item.deviceName}</td></tr>`;
+  });
 }
 
 async function startScan() {
-  const video = document.getElementById('video');
+  const videoId = currentMode === 'borrow' ? 'video' : 'videoReturn';
+  const video = document.getElementById(videoId);
   video.style.display = 'block';
-  stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
   video.srcObject = stream;
   video.play();
-  requestAnimationFrame(() => tick(video));
+  requestAnimationFrame(() => tick(video, stream));
 }
 
-function stopScan() {
-  const video = document.getElementById('video');
+function stopScan(video) {
   if (video.srcObject) {
     video.srcObject.getTracks().forEach(t => t.stop());
     video.srcObject = null;
@@ -86,7 +137,7 @@ function stopScan() {
   video.style.display = 'none';
 }
 
-async function tick(video) {
+async function tick(video, stream) {
   if (video.readyState === video.HAVE_ENOUGH_DATA) {
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -97,13 +148,13 @@ async function tick(video) {
     const code = jsQR(imageData.data, imageData.width, imageData.height);
 
     if (code) {
+      stopScan(video);
       const id = code.data.trim();
-      stopScan();
       const res = await fetch(`${API_URL}?method=getDevice&deviceId=${id}`);
       const device = await res.json();
       if (!device.deviceId) return alert('ไม่พบอุปกรณ์');
 
-      if (mode === 'borrow' && device.status === 'กำลังใช้งาน') {
+      if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน') {
         alert('อุปกรณ์นี้ถูกยืมอยู่แล้ว');
         return;
       }
@@ -112,40 +163,38 @@ async function tick(video) {
       renderBasket();
     }
   }
-  if (video.srcObject) requestAnimationFrame(() => tick(video));
+  if (video.srcObject) requestAnimationFrame(() => tick(video, stream));
 }
 
 function renderBasket() {
-  const list = document.getElementById('basketList');
-  list.innerHTML = '';
+  const listId = currentMode === 'borrow' ? 'basketList' : 'basketListReturn';
+  const list = document.getElementById(listId);
+  list.innerHTML = "";
   basket.forEach((item, idx) => {
-    const li = document.createElement('li');
-    li.className = "border-b py-1 flex justify-between";
-    li.innerHTML = `<span>${item.deviceId} - ${item.deviceName}</span><button onclick="removeFromBasket(${idx})">❌</button>`;
-    list.appendChild(li);
+    list.innerHTML += `<li class="border-b py-1 flex justify-between">
+      <span>${item.deviceId} - ${item.deviceName}</span>
+      <button onclick="removeFromBasket(${idx})">❌</button>
+    </li>`;
   });
 }
 
-function removeFromBasket(i) {
-  basket.splice(i, 1);
+function removeFromBasket(idx) {
+  basket.splice(idx, 1);
   renderBasket();
 }
 
-async function submit() {
-  if (!basket.length) return alert("ไม่มีอุปกรณ์ในตะกร้า");
-  const manual = document.getElementById('manualName').value.trim();
-  const nameToUse = userName || manual;
-  if (!nameToUse) return alert("กรุณาระบุชื่อ");
+async function submit(action) {
+  if (!basket.length) return alert("ยังไม่มีอุปกรณ์ในตะกร้า");
 
   const payload = {
-    action: mode,
+    action: action,
     userId: userId,
-    userName: nameToUse,
+    userName: userName,
     basket: basket
   };
 
   const res = await fetch(API_URL, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify(payload)
   });
   const text = await res.text();
@@ -153,11 +202,13 @@ async function submit() {
     alert("บันทึกสำเร็จ");
     basket = [];
     renderBasket();
-    stopScan();
+    showPage('home');
+    loadBorrowedList();
   } else {
     alert("เกิดข้อผิดพลาด");
   }
 }
 </script>
+
 </body>
 </html>
