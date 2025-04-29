@@ -10,13 +10,21 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .hidden { display: none; }
-    #video { display: none; width: 100%; max-width: 400px; border-radius: 0.5rem; }
+    #video, #videoReturn {
+      display: none;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 0.5rem;
+    }
+</style>
+
+    
   </style>
 </head>
-<body class="bg-slate-50 flex items-center justify-center p-4">
+<body class="bg-slate-100 flex items-center justify-center p-4">
 
 <!-- หน้า Home -->
-<div id="homePage" class="p-6 max-w-md w-full">
+<div id="homePage" class="p-4 max-w-md w-full">
   <div class="flex col-3">
   <div><img id="profileImage" src="" alt="" class="w-8 h-8 rounded-full border-2"></div>
   <div id="displayName" class="text-xl font-bold mb-1 pl-4"></div>
@@ -38,7 +46,7 @@
 </div>
 
 <!-- หน้ายืม -->
-<div id="borrowPage" class="hidden bg-white p-6  max-w-md w-full">
+<div id="borrowPage" class="hidden   p-4  max-w-md w-full">
   <div class="flex justify-between mb-4">
   <button onclick="showPage('home')" class="bg-slate-800 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
   <div class="text-md mt-2 r-0">ยืมอุปกรณ์</div>
@@ -50,7 +58,7 @@
 </div>
 
 <!-- หน้าคืน -->
-<div id="returnPage" class="hidden bg-white p-6 max-w-md w-full ">
+<div id="returnPage" class="hidden  p-4 max-w-md w-full ">
   <div class="flex justify-between mb-4">
     <button onclick="showPage('home')" class="bg-slate-800 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
     <div class="text-md mt-2 r-0">คืนอุปกรณ์</div>
@@ -77,7 +85,7 @@ window.onload = async () => {
   userId = profile.userId;
   document.getElementById('userId').textContent = userId;
   document.getElementById('displayName').value = profile.displayName;
-  document.getElementById('profileImage').src = profile.pictureUrl || 'https://via.placeholder.com/40?text=PROFILE';
+  document.getElementById('profileImage').src = profile.pictureUrl || 'https://placehold.co/400x400/EEE/31343C?font=noto-sans&text=IMG';
 
   const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
   const data = await res.json();
