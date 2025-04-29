@@ -13,21 +13,23 @@
     #video { display: none; width: 100%; max-width: 400px; border-radius: 0.5rem; }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="flex items-center justify-center p-4">
 
 <!-- หน้า Home -->
-<div id="homePage" class="bg-white p-6 rounded shadow max-w-md w-full text-center">
-  <h1 id="displayName" class="text-xl font-bold mb-1">-</h1>
-  <p id="userId" class="text-gray-500 text-sm">userId</p>
-
-  <div class="flex gap-4 my-4">
-    <button onclick="showPage('borrow')" class="bg-blue-500 text-white px-4 py-2 rounded w-full">ยืมอุปกรณ์</button>
-    <button onclick="showPage('return')" class="bg-yellow-500 text-white px-4 py-2 rounded w-full">คืนอุปกรณ์</button>
+<div id="homePage" class="p-6 max-w-md w-full">
+  <div class="flex col-3">
+  <div><img id="profileImage" src="" alt="" class="w-8 h-8 rounded-full border-2"></div>
+  <div id="displayName" class="text-xl font-bold mb-1 pl-4">test</div>
+  <div id="userId" class="text-gray-500 text-sm hidden">userId</div>
+  </div>
+  <div class="flex gap-4 my-6">
+    <button onclick="showPage('borrow')" class="bg-slate-800 text-white px-4 py-2 rounded w-full">ยืมอุปกรณ์</button>
+    <button onclick="showPage('return')" class="bg-slate-500 text-white px-4 py-2 rounded w-full">คืนอุปกรณ์</button>
   </div>
 
-  <h2 class="text-lg font-bold mb-2">📋 รายการที่กำลังยืม</h2>
+  <h2 class="text-md font-bold mb-2">📋 รายการที่กำลังยืม</h2>
   <table class="w-full text-sm border">
-    <thead><tr class="bg-gray-200">
+    <thead><tr class="bg-gray-800 text-white">
       <th class="border px-2 py-1">รหัส</th>
       <th class="border px-2 py-1">ชื่อ</th>
     </tr></thead>
@@ -36,20 +38,24 @@
 </div>
 
 <!-- หน้ายืม -->
-<div id="borrowPage" class="hidden bg-white p-6 rounded shadow max-w-md w-full text-center">
-  <button onclick="showPage('home')" class="text-sm text-gray-500 underline mb-4">🔙 กลับ</button>
-  <h2 class="text-lg font-bold mb-2">ยืมอุปกรณ์</h2>
-  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
+<div id="borrowPage" class="hidden bg-white p-6  max-w-md w-full">
+  <div class="flex justify-between mb-4">
+  <button onclick="showPage('home')" class="bg-slate-800 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
+  <div class="text-md mt-2 r-0">ยืมอุปกรณ์</div>
+  </div>
+  <button onclick="startScan()" class="bg-slate-800 text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
   <video id="video" playsinline></video>
   <ul id="basketList" class="text-left text-sm mt-4"></ul>
   <button onclick="submit('borrow')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
 </div>
 
 <!-- หน้าคืน -->
-<div id="returnPage" class="hidden bg-white p-6 rounded shadow max-w-md w-full text-center">
-  <button onclick="showPage('home')" class="text-sm text-gray-500 underline mb-4">🔙 กลับ</button>
-  <h2 class="text-lg font-bold mb-2">คืนอุปกรณ์</h2>
-  <button onclick="startScan()" class="bg-black text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
+<div id="returnPage" class="hidden bg-white p-6 max-w-md w-full ">
+  <div class="flex justify-between mb-4">
+    <button onclick="showPage('home')" class="bg-slate-800 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
+    <div class="text-md mt-2 r-0">คืนอุปกรณ์</div>
+    </div>
+  <button onclick="startScan()" class="bg-slate-800 text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
   <video id="videoReturn" playsinline></video>
   <ul id="basketListReturn" class="text-left text-sm mt-4"></ul>
   <button onclick="submit('return')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
@@ -66,10 +72,13 @@ let basket = [];
 let currentMode = "";
 
 window.onload = async () => {
-  await liff.init({ liffId: LIFF_ID });
+  //await liff.init({ liffId: LIFF_ID });
   const profile = await liff.getProfile();
   userId = profile.userId;
   document.getElementById('userId').textContent = userId;
+  document.getElementById('userlineid').value = userId; // เก็บค่า user ID
+  document.getElementById('displayName').value = profile.displayName;
+  document.getElementById('profileImage').src = profile.pictureUrl || 'https://via.placeholder.com/40?text=PROFILE';
 
   const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
   const data = await res.json();
