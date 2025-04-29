@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ระบบยืมคืนอุปกรณ์</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    #video { display: none; width: 100%; max-width: 400px; border-radius: 0.5rem; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+<div class="bg-white p-6 rounded shadow max-w-md w-full text-center">
+  <h1 class="text-xl font-bold mb-2">📦 ระบบยืม/คืน อุปกรณ์</h1>
+  <div class="mb-4">
+    <p class="text-sm text-gray-600">UserID: <span id="userId">-</span></p>
+    <p class="text-sm text-gray-600">ชื่อ: <span id="userName">-</span></p>
+    <input id="manualName" placeholder="กรอกชื่อหากไม่พบในระบบ" class="border mt-2 p-1 w-full rounded hidden"/>
+  </div>
+
+  <div class="flex gap-2 mb-4">
+    <button onclick="setMode('borrow')" class="bg-blue-500 text-white px-4 py-2 rounded w-full">ยืม</button>
+    <button onclick="setMode('return')" class="bg-yellow-500 text-white px-4 py-2 rounded w-full">คืน</button>
+  </div>
+
+  <video id="video" playsinline></video>
+  <div class="text-sm text-blue-500 my-2" id="message"></div>
+  <ul id="basketList" class="text-left text-sm"></ul>
+
+  <button onclick="submit()" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ บันทึก</button>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbwijQzkvwZx4ucNi3n2gCg8brSECV1UxGS7ZR1nAsdpHmYGkCN6hrJyoeuxGsQxEqE5/exec';
+const LIFF_ID = '2007335399-deQzG3E7';
+
+let userId = '';
+let userName = '';
+let basket = [];
+let mode = ''; // 'borrow' หรือ 'return'
+let stream = null;
+
+window.onload = async () => {
+  await liff.init({ liffId: LIFF_ID });
+  const profile = await liff.getProfile();
+  userId = profile.userId;
+  document.getElementById('userId').textContent = userId;
+
+  // หา userName จากชีตพนักงาน
+  const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
+  const data = await res.json();
+  if (data.found) {
+    userName = data.name;
+    document.getElementById('userName').textContent = userName;
+  } else {
+    document.getElementById('manualName').classList.remove('hidden');
+    document.getElementById('userName').textContent = '(กรุณากรอกชื่อ)';
+  }
+};
+
+function setMode(m) {
+  mode = m;
+  basket = [];
+  renderBasket();
+  startScan();
+}
+
+async function startScan() {
+  const video = document.getElementById('video');
+  video.style.display = 'block';
+  stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  video.srcObject = stream;
+  video.play();
+  requestAnimationFrame(() => tick(video));
+}
+
+function stopScan() {
+  const video = document.getElementById('video');
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+  }
+  video.style.display = 'none';
+}
+
+async function tick(video) {
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+    if (code) {
+      const id = code.data.trim();
+      stopScan();
+      const res = await fetch(`${API_URL}?method=getDevice&deviceId=${id}`);
+      const device = await res.json();
+      if (!device.deviceId) return alert('ไม่พบอุปกรณ์');
+
+      if (mode === 'borrow' && device.status === 'กำลังใช้งาน') {
+        alert('อุปกรณ์นี้ถูกยืมอยู่แล้ว');
+        return;
+      }
+
+      basket.push(device);
+      renderBasket();
+    }
+  }
+  if (video.srcObject) requestAnimationFrame(() => tick(video));
+}
+
+function renderBasket() {
+  const list = document.getElementById('basketList');
+  list.innerHTML = '';
+  basket.forEach((item, idx) => {
+    const li = document.createElement('li');
+    li.className = "border-b py-1 flex justify-between";
+    li.innerHTML = `<span>${item.deviceId} - ${item.deviceName}</span><button onclick="removeFromBasket(${idx})">❌</button>`;
+    list.appendChild(li);
+  });
+}
+
+function removeFromBasket(i) {
+  basket.splice(i, 1);
+  renderBasket();
+}
+
+async function submit() {
+  if (!basket.length) return alert("ไม่มีอุปกรณ์ในตะกร้า");
+  const manual = document.getElementById('manualName').value.trim();
+  const nameToUse = userName || manual;
+  if (!nameToUse) return alert("กรุณาระบุชื่อ");
+
+  const payload = {
+    action: mode,
+    userId: userId,
+    userName: nameToUse,
+    basket: basket
+  };
+
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  if (text.includes("success")) {
+    alert("บันทึกสำเร็จ");
+    basket = [];
+    renderBasket();
+    stopScan();
+  } else {
+    alert("เกิดข้อผิดพลาด");
+  }
+}
+</script>
+</body>
+</html>
