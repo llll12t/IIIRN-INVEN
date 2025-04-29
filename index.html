@@ -145,38 +145,42 @@
     }
 
     async function submitBasket() {
-      const borrowerName = document.getElementById('borrowerName').value.trim();
-      if (!borrowerName) return alert('กรุณากรอกชื่อผู้ยืม');
-      if (!basket.length)    return alert('ยังไม่มีอุปกรณ์ในตะกร้า');
+  const borrowerName = document.getElementById('borrowerName').value.trim();
+  if (!borrowerName) return alert('กรุณากรอกชื่อผู้ยืม');
+  if (!basket.length)    return alert('ยังไม่มีอุปกรณ์ในตะกร้า');
 
-      const borrowList = basket.map(d => ({
-        deviceId: d.deviceId,
-        deviceName: d.deviceName,
-        borrowerName,
-        userId: ''  // ถ้ามี userId ใส่ตรงนี้
-      }));
+  const borrowList = {
+    method: 'borrow',   // เพิ่ม method เข้าไปใน body
+    data: basket.map(d => ({
+      deviceId: d.deviceId,
+      deviceName: d.deviceName,
+      borrowerName,
+      userId: ''
+    }))
+  };
 
-      try {
-        const res  = await fetch(`${API_URL}?method=borrow`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(borrowList)
-        });
-        const text = await res.text();
-        if (text === 'success') {
-          alert('บันทึกการยืมเรียบร้อย!');
-          basket = [];
-          renderBasket();
-          document.getElementById('borrowerName').value = '';
-        } else {
-          console.error('response:', text);
-          alert('บันทึกไม่สำเร็จ');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('ส่งข้อมูลไม่สำเร็จ: ' + err.message);
-      }
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(borrowList)
+    });
+    const text = await res.text();
+    if (text === 'success') {
+      alert('บันทึกการยืมเรียบร้อย!');
+      basket = [];
+      renderBasket();
+      document.getElementById('borrowerName').value = '';
+    } else {
+      console.error('response:', text);
+      alert('บันทึกไม่สำเร็จ');
     }
+  } catch (err) {
+    console.error(err);
+    alert('ส่งข้อมูลไม่สำเร็จ: ' + err.message);
+  }
+}
+
   </script>
 </body>
 </html>
