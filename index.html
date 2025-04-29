@@ -4,10 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>Borrow Devices (Live Scan)</title>
-
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-
   <style>
     #video {
       width: 100%;
@@ -26,19 +24,24 @@
     </button>
 
     <video id="video" playsinline></video>
-
     <div id="message" class="text-sm text-blue-500 my-2"></div>
     <div id="basketList" class="text-gray-700 mb-4"></div>
 
-    <input id="borrowerName" type="text" placeholder="Your Name" class="border rounded w-full p-2 mb-4"/>
-
+    <input id="borrowerName" type="text" placeholder="ชื่อผู้ยืม" class="border rounded w-full p-2 mb-4"/>
     <button onclick="submitBasket()" class="bg-green-500 text-white px-6 py-3 rounded w-full">
       ✅ Submit Borrow
     </button>
+
+    <button onclick="fetchBorrowList()" class="bg-purple-500 text-white px-6 py-3 rounded w-full mt-4">
+      📋 ดูรายการยืม
+    </button>
+    
+    <div id="borrowList" class="text-gray-700 mt-4"></div>
+    
   </div>
 
   <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxEdiFTpzQC4R6TdsRPqUJp3o-xSIhLUaIzD4yWqwh7_WlgAyvDOFWPRYAiNgLxTvDw/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxv9aZkXx1VwliXAcBMtBxMX35ZGf4hyZGqDHEUJM-m2LiTtZDLy4xf2h8wUtN0sxla/exec'; // 🔁 ใส่ URL จากการ Deploy GAS ที่นี่
     let basket = [];
     let _stream = null;
 
@@ -59,6 +62,36 @@
         alert('ไม่สามารถเปิดกล้องได้: ' + err.message);
       }
     }
+    async function fetchBorrowList() {
+  try {
+    const res = await fetch(`${API_URL}?method=getBorrowList`);
+    const data = await res.json();
+    renderBorrowList(data);
+  } catch (err) {
+    console.error('Error fetching borrow list:', err);
+    alert('โหลดรายการยืมไม่สำเร็จ');
+  }
+}
+
+function renderBorrowList(data) {
+  const container = document.getElementById('borrowList');
+  if (!data.length) {
+    container.innerHTML = '<p class="text-gray-500">ยังไม่มีการยืม</p>';
+    return;
+  }
+  let html = '<h2 class="text-xl font-bold mb-2">📋 รายการยืม</h2><ul class="text-left">';
+  data.forEach(item => {
+    html += `
+      <li class="border-b py-2">
+        📦 ${item.deviceId} - ${item.deviceName} <br/>
+        🙍‍♂️ ผู้ยืม: ${item.borrowerName} <br/>
+        🕒 เวลา: ${item.timestamp}
+      </li>`;
+  });
+  html += '</ul>';
+  container.innerHTML = html;
+}
+
 
     function stopScan() {
       const video = document.getElementById('video');
@@ -139,24 +172,18 @@
       if (!borrowerName) return alert('กรุณากรอกชื่อผู้ยืม');
       if (!basket.length) return alert('ยังไม่มีอุปกรณ์ในตะกร้า');
 
-      const borrowList = {
-        method: 'borrow',
-        data: basket.map(d => ({
-          deviceId: d.deviceId,
-          deviceName: d.deviceName,
-          borrowerName,
-          userId: ''
-        }))
+      const borrowData = {
+        borrowerName: borrowerName,
+        basket: basket
       };
 
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(borrowList)
+          body: JSON.stringify(borrowData)
         });
         const text = await res.text();
-        if (text === 'success') {
+        if (text.includes('success')) {
           alert('บันทึกการยืมเรียบร้อย!');
           basket = [];
           renderBasket();
@@ -166,7 +193,7 @@
           alert('บันทึกไม่สำเร็จ');
         }
       } catch (err) {
-        console.error(err);
+        console.error('Fetch error:', err);
         alert('ส่งข้อมูลไม่สำเร็จ: ' + err.message);
       }
     }
