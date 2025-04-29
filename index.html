@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>Borrow Devices (Live Scan)</title>
 
-  <!-- jsQR สำหรับ decode QR จาก canvas -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -22,24 +21,18 @@
   <div class="bg-white p-6 rounded shadow w-full max-w-md text-center">
     <h1 class="text-2xl font-bold mb-4">📦 Borrow Devices</h1>
 
-    <button onclick="startScan()" 
-            class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
+    <button onclick="startScan()" class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
       📷 Live Scan QR Code
     </button>
 
-    <!-- video element สำหรับโชว์กล้อง -->
     <video id="video" playsinline></video>
 
     <div id="message" class="text-sm text-blue-500 my-2"></div>
     <div id="basketList" class="text-gray-700 mb-4"></div>
 
-    <input id="borrowerName" 
-           type="text" 
-           placeholder="Your Name" 
-           class="border rounded w-full p-2 mb-4"/>
+    <input id="borrowerName" type="text" placeholder="Your Name" class="border rounded w-full p-2 mb-4"/>
 
-    <button onclick="submitBasket()" 
-            class="bg-green-500 text-white px-6 py-3 rounded w-full">
+    <button onclick="submitBasket()" class="bg-green-500 text-white px-6 py-3 rounded w-full">
       ✅ Submit Borrow
     </button>
   </div>
@@ -50,15 +43,13 @@
     let _stream = null;
 
     async function startScan() {
-      const video   = document.getElementById('video');
+      const video = document.getElementById('video');
       const message = document.getElementById('message');
       message.innerText = '🔄 เปิดกล้อง สแกน QR Code...';
       video.style.display = 'block';
 
       try {
-        _stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
+        _stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         video.srcObject = _stream;
         video.play();
         requestAnimationFrame(tick);
@@ -83,9 +74,8 @@
     function tick() {
       const video = document.getElementById('video');
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        // วาดลง canvas แล้วสแกน
         const canvas = document.createElement('canvas');
-        canvas.width  = video.videoWidth;
+        canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0);
@@ -105,7 +95,7 @@
       const message = document.getElementById('message');
       message.innerText = '🔎 กำลังค้นหาอุปกรณ์...';
       try {
-        const res    = await fetch(`${API_URL}?method=getDevice&deviceId=${encodeURIComponent(deviceId)}`);
+        const res = await fetch(`${API_URL}?method=getDevice&deviceId=${encodeURIComponent(deviceId)}`);
         const device = await res.json();
         if (device.deviceId) {
           basket.push(device);
@@ -128,7 +118,7 @@
         return;
       }
       let html = '<ul class="text-left">';
-      basket.forEach((d,i) => {
+      basket.forEach((d, i) => {
         html += `
           <li class="flex justify-between items-center border-b py-2">
             ${d.deviceId} - ${d.deviceName}
@@ -145,42 +135,41 @@
     }
 
     async function submitBasket() {
-  const borrowerName = document.getElementById('borrowerName').value.trim();
-  if (!borrowerName) return alert('กรุณากรอกชื่อผู้ยืม');
-  if (!basket.length)    return alert('ยังไม่มีอุปกรณ์ในตะกร้า');
+      const borrowerName = document.getElementById('borrowerName').value.trim();
+      if (!borrowerName) return alert('กรุณากรอกชื่อผู้ยืม');
+      if (!basket.length) return alert('ยังไม่มีอุปกรณ์ในตะกร้า');
 
-  const borrowList = {
-    method: 'borrow',   // เพิ่ม method เข้าไปใน body
-    data: basket.map(d => ({
-      deviceId: d.deviceId,
-      deviceName: d.deviceName,
-      borrowerName,
-      userId: ''
-    }))
-  };
+      const borrowList = {
+        method: 'borrow',
+        data: basket.map(d => ({
+          deviceId: d.deviceId,
+          deviceName: d.deviceName,
+          borrowerName,
+          userId: ''
+        }))
+      };
 
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(borrowList)
-    });
-    const text = await res.text();
-    if (text === 'success') {
-      alert('บันทึกการยืมเรียบร้อย!');
-      basket = [];
-      renderBasket();
-      document.getElementById('borrowerName').value = '';
-    } else {
-      console.error('response:', text);
-      alert('บันทึกไม่สำเร็จ');
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(borrowList)
+        });
+        const text = await res.text();
+        if (text === 'success') {
+          alert('บันทึกการยืมเรียบร้อย!');
+          basket = [];
+          renderBasket();
+          document.getElementById('borrowerName').value = '';
+        } else {
+          console.error('response:', text);
+          alert('บันทึกไม่สำเร็จ');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('ส่งข้อมูลไม่สำเร็จ: ' + err.message);
+      }
     }
-  } catch (err) {
-    console.error(err);
-    alert('ส่งข้อมูลไม่สำเร็จ: ' + err.message);
-  }
-}
-
   </script>
 </body>
 </html>
