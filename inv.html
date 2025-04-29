@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ยืมคืนอุปกรณ์</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
@@ -33,7 +31,7 @@
     <div class="flex col-3">
       <div><img id="profileImage" src="" alt="" class="w-8 h-8 rounded-full border-2"></div>
       <div id="displayName" class="text-xl font-bold mb-1 pl-4"></div>
-      <div id="userId" class="text-gray-500 text-sm hidden">userId</div>
+      <div id="userId" class="text-gray-500 text-sm hidden"></div>
     </div>
     <div class="flex gap-4 my-6">
       <button onclick="showPage('borrow')" class="bg-slate-800 text-white px-4 py-2 rounded w-full">ยืมอุปกรณ์</button>
@@ -84,6 +82,7 @@
     let userName = "";
     let basket = [];
     let currentMode = "";
+    let borrowedSet = new Set();  // เก็บรหัสอุปกรณ์ที่ยืมอยู่
 
     // Loader
     function showLoading(text = "กำลังโหลด ..") {
@@ -104,6 +103,7 @@
       document.getElementById('profileImage').src = profile.pictureUrl ||
         'https://placehold.co/400x400/EEE/31343C?font=noto-sans&text=IMG';
 
+      // ดึงชื่อผู้ใช้
       try {
         const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
         const data = await res.json();
@@ -123,6 +123,7 @@
       loadBorrowedList();
     };
 
+    // แสดงหน้า
     function showPage(page) {
       document.getElementById('homePage').classList.add('hidden');
       document.getElementById('borrowPage').classList.add('hidden');
@@ -142,6 +143,7 @@
       }
     }
 
+    // โหลดรายการที่กำลังยืม และเก็บใน Set
     async function loadBorrowedList() {
       showLoading("กำลังโหลดรายการที่กำลังยืม ..");
       try {
@@ -149,6 +151,9 @@
         const data = await res.json();
         const list = document.getElementById('borrowList');
         list.innerHTML = "";
+
+        borrowedSet = new Set(data.map(item => item.deviceId));  // เก็บ Device IDs
+
         data.forEach(item => {
           list.innerHTML += `<tr>
             <td class="border px-2">${item.deviceId}</td>
@@ -162,6 +167,7 @@
       hideLoading();
     }
 
+    // เริ่มสแกน QR
     async function startScan() {
       const videoId = currentMode === 'borrow' ? 'video' : 'videoReturn';
       const video = document.getElementById(videoId);
@@ -172,6 +178,7 @@
       requestAnimationFrame(() => tick(video, stream));
     }
 
+    // หยุดสแกน
     function stopScan(video) {
       if (video.srcObject) {
         video.srcObject.getTracks().forEach(t => t.stop());
@@ -180,6 +187,7 @@
       video.style.display = 'none';
     }
 
+    // ประมวลผล QR แต่ละเฟรม
     function tick(video, stream) {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
         const canvas = document.createElement('canvas');
@@ -199,13 +207,27 @@
             .then(device => {
               hideLoading();
               if (!device.deviceId) return alert("ไม่พบอุปกรณ์");
-              // ป้องกันสแกนซ้ำ
-              if (basket.some(i => i.deviceId === device.deviceId)) {
-                return alert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
+
+              // เช็คโหมดคืน: ถ้าไม่เคยยืม คืนไม่ได้
+              if (currentMode === 'return') {
+                if (!borrowedSet.has(device.deviceId)) {
+                  return alert("อุปกรณ์นี้ยังไม่ได้ถูกยืม ไม่สามารถคืนได้");
+                }
+                if (basket.some(i => i.deviceId === device.deviceId)) {
+                  return alert("อุปกรณ์นี้อยู่ในตะกร้าคืนแล้ว");
+                }
               }
-              if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน') {
-                return alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
+
+              // เช็คโหมดยืม: ห้ามสแกนซ้ำในตะกร้า และถ้าอุปกรณ์กำลังยืมอยู่แล้ว
+              if (currentMode === 'borrow') {
+                if (basket.some(i => i.deviceId === device.deviceId)) {
+                  return alert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
+                }
+                if (device.status === 'กำลังใช้งาน') {
+                  return alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
+                }
               }
+
               basket.push(device);
               renderBasket();
             })
@@ -219,6 +241,7 @@
       if (video.srcObject) requestAnimationFrame(() => tick(video, stream));
     }
 
+    // แสดงตะกร้า
     function renderBasket() {
       const listId = currentMode === 'borrow' ? 'basketList' : 'basketListReturn';
       const list = document.getElementById(listId);
@@ -231,11 +254,13 @@
       });
     }
 
+    // ลบจากตะกร้า
     function removeFromBasket(i) {
       basket.splice(i, 1);
       renderBasket();
     }
 
+    // ส่งข้อมูลยืม/คืน
     async function submit(action) {
       if (!basket.length) return alert("ยังไม่มีอุปกรณ์ในตะกร้า");
       const payload = { action, userId, userName, basket };
