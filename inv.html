@@ -19,7 +19,7 @@
 <div id="homePage" class="p-6 max-w-md w-full">
   <div class="flex col-3">
   <div><img id="profileImage" src="" alt="" class="w-8 h-8 rounded-full border-2"></div>
-  <div id="displayName" class="text-xl font-bold mb-1 pl-4">test</div>
+  <div id="displayName" class="text-xl font-bold mb-1 pl-4"></div>
   <div id="userId" class="text-gray-500 text-sm hidden">userId</div>
   </div>
   <div class="flex gap-4 my-6">
@@ -72,7 +72,7 @@ let basket = [];
 let currentMode = "";
 
 window.onload = async () => {
-  //await liff.init({ liffId: LIFF_ID });
+  await liff.init({ liffId: LIFF_ID });
   const profile = await liff.getProfile();
   userId = profile.userId;
   document.getElementById('userId').textContent = userId;
