@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>ยืมคืนอุปกรณ์</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
@@ -102,7 +104,6 @@
       document.getElementById('profileImage').src = profile.pictureUrl ||
         'https://placehold.co/400x400/EEE/31343C?font=noto-sans&text=IMG';
 
-      // ดึงชื่อจาก API
       try {
         const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
         const data = await res.json();
@@ -198,9 +199,12 @@
             .then(device => {
               hideLoading();
               if (!device.deviceId) return alert("ไม่พบอุปกรณ์");
+              // ป้องกันสแกนซ้ำ
+              if (basket.some(i => i.deviceId === device.deviceId)) {
+                return alert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
+              }
               if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน') {
-                alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
-                return;
+                return alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
               }
               basket.push(device);
               renderBasket();
