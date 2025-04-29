@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <title>Borrow Devices</title>
-
-  <!-- 1) โหลด html5-qrcode ก่อนโค้ดของเรา -->
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -19,10 +16,10 @@
       📷 Scan QR Code
     </button>
 
-    <!-- 2) div สำหรับแสดงกล้อง -->
-    <div id="reader" class="w-full mb-4" style="display:none;"></div>
+    <!-- วิดีโอสำหรับสแกน -->
+    <video id="video" class="w-full mb-4 rounded" style="display:none;"></video>
+    <div id="scannerMessage" class="text-sm text-blue-500 mb-2"></div>
 
-    <div id="loadingMessage" class="text-sm text-blue-500 mb-2"></div>
     <div id="basketList" class="text-gray-700 mb-4"></div>
 
     <input id="borrowerName" type="text" placeholder="Your Name" class="border rounded w-full p-2 mb-4">
@@ -34,41 +31,56 @@
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbxEdiFTpzQC4R6TdsRPqUJp3o-xSIhLUaIzD4yWqwh7_WlgAyvDOFWPRYAiNgLxTvDw/exec'; 
     let basket = [];
-    let userId = '';
+    let userId = ''; // ถ้ามี ใช้เก็บ userId ต่อ
 
-    // --- ฟังก์ชั่นสแกนด้วย html5-qrcode ---
     async function scanCodeV2() {
-      // แสดงกล้อง
-      const reader = document.getElementById('reader');
-      reader.style.display = 'block';
-
-      const html5QrCode = new Html5Qrcode("reader");
-      try {
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 250 },
-          // onSuccess
-          decodedText => {
-            html5QrCode.stop();              // หยุดกล้อง
-            reader.style.display = 'none';   // ซ่อนกล้อง
-            addDeviceToBasket(decodedText);  // ส่งต่อให้เก็บในตะกร้า
-          },
-          // onError (optional)
-          errorMessage => {
-            console.warn('QR scan error:', errorMessage);
-          }
-        );
-      } catch (err) {
-        console.error('Cannot start scan:', err);
-        alert('ไม่สามารถเริ่มสแกนได้: ' + err);
-        reader.style.display = 'none';
+      if (!('BarcodeDetector' in window)) {
+        return alert('เบราว์เซอร์ไม่รองรับ BarcodeDetector API');
       }
+      const video = document.getElementById('video');
+      const msg   = document.getElementById('scannerMessage');
+      msg.innerText = '🔄 กำลังเปิดกล้อง...';
+      video.style.display = 'block';
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        await video.play();
+      } catch (e) {
+        console.error(e);
+        msg.innerText = '';
+        alert('ไม่สามารถเปิดกล้องได้: ' + e.message);
+        return;
+      }
+
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      msg.innerText = '📡 สแกน QR Code...';
+
+      const scanLoop = async () => {
+        try {
+          const barcodes = await detector.detect(video);
+          if (barcodes.length) {
+            const code = barcodes[0].rawValue;
+            // หยุดกล้อง
+            stream.getTracks().forEach(t => t.stop());
+            video.style.display = 'none';
+            msg.innerText = '';
+            addDeviceToBasket(code);
+            return;
+          }
+        } catch (err) {
+          console.warn(err);
+        }
+        requestAnimationFrame(scanLoop);
+      };
+      scanLoop();
     }
 
     async function addDeviceToBasket(deviceId) {
-      document.getElementById('loadingMessage').innerText = '🔎 กำลังค้นหาอุปกรณ์...';
+      document.getElementById('scannerMessage').innerText = '🔎 กำลังค้นหาอุปกรณ์...';
       try {
-        const res = await fetch(`${API_URL}?method=getDevice&deviceId=${deviceId}`);
+        const res = await fetch(`${API_URL}?method=getDevice&deviceId=${encodeURIComponent(deviceId)}`);
         const device = await res.json();
         if (device.deviceId) {
           basket.push(device);
@@ -78,9 +90,9 @@
         }
       } catch (error) {
         console.error(error);
-        alert('โหลดข้อมูลไม่สำเร็จ: ' + error);
+        alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message);
       } finally {
-        document.getElementById('loadingMessage').innerText = '';
+        document.getElementById('scannerMessage').innerText = '';
       }
     }
 
@@ -137,10 +149,9 @@
         }
       } catch (err) {
         console.error(err);
-        alert('ส่งข้อมูลไม่สำเร็จ: ' + err);
+        alert('ส่งข้อมูลไม่สำเร็จ: ' + err.message);
       }
     }
   </script>
-
 </body>
 </html>
