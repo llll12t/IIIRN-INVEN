@@ -4,147 +4,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Borrow Devices</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- HTML5 QR Code library -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-<div class="bg-white p-6 rounded shadow w-full max-w-md text-center">
-  <h1 class="text-2xl font-bold mb-4">📦 Borrow Devices</h1>
+  <div class="bg-white p-6 rounded shadow w-full max-w-md text-center">
+    <h1 class="text-2xl font-bold mb-4">📦 Borrow Devices</h1>
 
-  <button onclick="scanCodeV2()" class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
-    📷 Scan QR Code
-  </button>
+    <button id="scanBtn" onclick="scanCodeV2()" class="bg-blue-500 text-white px-6 py-3 rounded mb-4 w-full">
+      📷 Scan QR Code
+    </button>
 
-  <div id="loadingMessage" class="text-sm text-blue-500 mb-2"></div> <!-- NEW: Loading Message -->
-  <div id="basketList" class="text-gray-700 mb-4"></div>
+    <!-- Scanner element -->
+    <div id="reader" class="w-full mb-4 hidden"></div>
 
-  <input id="borrowerName" type="text" placeholder="Your Name" class="border rounded w-full p-2 mb-4">
-  <button onclick="submitBasket()" class="bg-green-500 text-white px-6 py-3 rounded w-full">
-    ✅ Submit Borrow
-  </button>
-</div>
+    <div id="loadingMessage" class="text-sm text-blue-500 mb-2"></div>
+    <div id="basketList" class="text-gray-700 mb-4"></div>
 
-<script>
-  const API_URL = 'https://script.google.com/macros/s/AKfycbxEdiFTpzQC4R6TdsRPqUJp3o-xSIhLUaIzD4yWqwh7_WlgAyvDOFWPRYAiNgLxTvDw/exec'; 
-  let basket = [];
-  let userId = '';
+    <input id="borrowerName" type="text" placeholder="Your Name" class="border rounded w-full p-2 mb-4">
+    <button onclick="submitBasket()" class="bg-green-500 text-white px-6 py-3 rounded w-full">
+      ✅ Submit Borrow
+    </button>
+  </div>
 
-window.onload = async () => {
-  await liff.init({ liffId: '2007335399-deQzG3E7' });
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/.../exec';  // เปลี่ยนเป็น URL จริงของคุณ
+    let basket = [];
 
-  if (!liff.isLoggedIn()) {
-    liff.login({
-      scope: ['profile', 'openid', 'scan'],
-      redirectUri: window.location.href
-    });
-  } else {
-    const profile = await liff.getProfile();
-    userId = profile.userId;
-  }
-  renderBasket();
-};
-
-  async function scanCodeV2() {
-    try {
-      const result = await liff.scanCodeV2();
-      const scannedValue = result.value;
-      await addDeviceToBasket(scannedValue);
-    } catch (error) {
-      console.error(error);
-      alert('ไม่สามารถสแกน QR Code ได้: ' + error.message);
-    }
-  }
-
-  async function addDeviceToBasket(deviceId) {
-    try {
-      document.getElementById('loadingMessage').innerText = '🔎 กำลังค้นหาอุปกรณ์...'; // NEW: Loading text
-      const res = await fetch(`${API_URL}?method=getDevice&deviceId=${deviceId}`);
-      const device = await res.json();
-
-      if (device.deviceId) {
-        basket.push(device);
-        renderBasket();
-      } else {
-        alert('ไม่พบข้อมูลอุปกรณ์นี้');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message);
-    } finally {
-      document.getElementById('loadingMessage').innerText = ''; // NEW: clear loading text
-    }
-  }
-
-  function renderBasket() {
-    const container = document.getElementById('basketList');
-    if (basket.length === 0) {
-      container.innerHTML = '<p class="text-gray-500">ยังไม่มีอุปกรณ์ในตะกร้า</p>';
-      return;
-    }
-
-    container.innerHTML = '<ul class="text-left">';
-    basket.forEach((item, index) => {
-      container.innerHTML += `
-        <li class="flex justify-between items-center border-b py-2">
-          ${item.deviceId} - ${item.deviceName}
-          <button onclick="removeFromBasket(${index})" class="text-red-500">🗑️</button>
-        </li>
-      `;
-    });
-    container.innerHTML += '</ul>';
-  }
-
-  function removeFromBasket(index) {
-    basket.splice(index, 1);
-    renderBasket();
-  }
-
-  async function submitBasket() {
-    const borrowerName = document.getElementById('borrowerName').value.trim();
-    if (!borrowerName) {
-      alert('กรุณากรอกชื่อผู้ยืม');
-      return;
-    }
-    if (basket.length === 0) {
-      alert('ยังไม่มีอุปกรณ์ในตะกร้า');
-      return;
-    }
-
-    const borrowList = basket.map(d => ({
-      deviceId: d.deviceId,
-      deviceName: d.deviceName,
-      borrowerName,
-      userId
-    }));
-
-    console.log('ข้อมูลที่กำลังจะส่ง:', borrowList); // NEW: Debug ข้อมูลก่อนส่ง
-
-    try {
-      const res = await fetch(`${API_URL}?method=borrow`, {
-        method: 'POST',
-        body: JSON.stringify(borrowList),
-        headers: {
-          'Content-Type': 'application/json'
+    function scanCodeV2() {
+      const readerElem = document.getElementById('reader');
+      readerElem.classList.remove('hidden');
+      const html5QrcodeScanner = new Html5Qrcode("reader");
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText, decodedResult) => {
+          html5QrcodeScanner.stop().then(() => {
+            readerElem.classList.add('hidden');
+            addDeviceToBasket(decodedText);
+          }).catch(err => console.error('Failed to stop scanner', err));
+        },
+        errorMessage => {
+          console.warn('QR scan error', errorMessage);
         }
+      ).catch(err => {
+        console.error('Unable to start scanner', err);
+        alert('ไม่สามารถเปิดกล้องเพื่อสแกนได้');
       });
-
-      const text = await res.text();
-      if (text === 'success') {
-        alert('บันทึกการยืมเรียบร้อยแล้ว!');
-        basket = [];
-        renderBasket();
-        document.getElementById('borrowerName').value = '';
-      } else {
-        console.error('ส่งแล้วได้ข้อความ:', text); // เพิ่ม Debug response
-        alert('บันทึกไม่สำเร็จ');
-      }
-    } catch (error) {
-      console.error('ส่งข้อมูลไม่สำเร็จ:', error);
-      alert('ส่งข้อมูลไม่สำเร็จ: ' + error.message);
     }
-  }
-</script>
 
+    async function addDeviceToBasket(deviceId) {
+      try {
+        document.getElementById('loadingMessage').innerText = '🔎 กำลังค้นหาอุปกรณ์...';
+        const res = await fetch(`${API_URL}?method=getDevice&deviceId=${encodeURIComponent(deviceId)}`);
+        const device = await res.json();
+
+        if (device.deviceId) {
+          basket.push(device);
+          renderBasket();
+        } else {
+          alert('ไม่พบข้อมูลอุปกรณ์นี้');
+        }
+      } catch (error) {
+        console.error(error);
+        alert('โหลดข้อมูลไม่สำเร็จ: ' + error.message);
+      } finally {
+        document.getElementById('loadingMessage').innerText = '';  
+      }
+    }
+
+    function renderBasket() {
+      const container = document.getElementById('basketList');
+      if (!basket.length) {
+        container.innerHTML = '<p class="text-gray-500">ยังไม่มีอุปกรณ์ในตะกร้า</p>';
+        return;
+      }
+      const items = basket.map((item, idx) => 
+        `<li class="flex justify-between items-center border-b py-2">
+          ${item.deviceId} - ${item.deviceName}
+          <button onclick="removeFromBasket(${idx})" class="text-red-500">🗑️</button>
+        </li>`
+      ).join('');
+      container.innerHTML = `<ul class="text-left">${items}</ul>`;
+    }
+
+    function removeFromBasket(index) {
+      basket.splice(index, 1);
+      renderBasket();
+    }
+
+    async function submitBasket() {
+      const borrowerName = document.getElementById('borrowerName').value.trim();
+      if (!borrowerName) {
+        alert('กรุณากรอกชื่อผู้ยืม');
+        return;
+      }
+      if (!basket.length) {
+        alert('ยังไม่มีอุปกรณ์ในตะกร้า');
+        return;
+      }
+
+      const borrowList = basket.map(d => ({ deviceId: d.deviceId, deviceName: d.deviceName, borrowerName }));
+      try {
+        const res = await fetch(`${API_URL}?method=borrow`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(borrowList)
+        });
+        const text = await res.text();
+        if (text === 'success') {
+          alert('บันทึกการยืมเรียบร้อยแล้ว!');
+          basket = [];
+          renderBasket();
+          document.getElementById('borrowerName').value = '';
+        } else {
+          console.error('Response:', text);
+          alert('บันทึกไม่สำเร็จ');
+        }
+      } catch (error) {
+        console.error(error);
+        alert('ส่งข้อมูลไม่สำเร็จ: ' + error.message);
+      }
+    }
+  </script>
 </body>
 </html>
