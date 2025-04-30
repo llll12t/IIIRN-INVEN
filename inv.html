@@ -162,23 +162,32 @@
       hideLoading();
     }
 
+    let stream;
+    
+    async function initCamera() {
+      if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        await video.play();
+      }
+    }
+    
     async function startScan() {
-      const videoId = currentMode === 'borrow' ? 'video' : 'videoReturn';
-      const video = document.getElementById(videoId);
-      video.style.display = 'block';
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-      video.play();
-      requestAnimationFrame(() => tick(video, stream));
+      await initCamera();
+      document.getElementById('video').style.display = 'block';
+      stream.getVideoTracks().forEach(t => t.enabled = true);
+      requestAnimationFrame(tick);
+    }
+    
+    function stopScan() {
+      document.getElementById('video').style.display = 'none';
+      stream.getVideoTracks().forEach(t => t.enabled = false);
+      document.getElementById('message').innerText = '';
     }
 
-    function stopScan(video) {
-      if (video.srcObject) {
-        video.srcObject.getTracks().forEach(t => t.stop());
-        video.srcObject = null;
-      }
-      video.style.display = 'none';
-    }
 
     function tick(video, stream) {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
