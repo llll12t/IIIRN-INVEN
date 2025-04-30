@@ -85,6 +85,32 @@
     let basket = [];
     let currentMode = "";
 
+    // *** CAMERA STREAM REUSE ***
+    let cameraStream = null;
+
+    async function initCamera(video) {
+      if (!cameraStream) {
+        // ขอสิทธิ์และเก็บ stream ครั้งเดียว
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+      }
+      // ตั้ง srcObject ทุกครั้งที่ใช้ video element ใหม่
+      video.srcObject = cameraStream;
+      await video.play();
+    }
+
+    function enableCamera() {
+      // เปิดใช้งานแต่ไม่ขอสิทธิ์ซ้ำ
+      cameraStream.getVideoTracks().forEach(t => t.enabled = true);
+    }
+
+    function disableCamera() {
+      // ปิดกล้องโดยไม่หยุด stream จริง
+      cameraStream.getVideoTracks().forEach(t => t.enabled = false);
+    }
+    // *** END CAMERA SETUP ***
+
     // Loader
     function showLoading(text = "กำลังโหลด ..") {
       document.getElementById("loadingText").textContent = text;
@@ -124,9 +150,9 @@
     };
 
     function showPage(page) {
-      document.getElementById('homePage').classList.add('hidden');
-      document.getElementById('borrowPage').classList.add('hidden');
-      document.getElementById('returnPage').classList.add('hidden');
+      ['homePage','borrowPage','returnPage'].forEach(id =>
+        document.getElementById(id).classList.add('hidden')
+      );
       if (page === 'home') document.getElementById('homePage').classList.remove('hidden');
       if (page === 'borrow') {
         currentMode = 'borrow';
@@ -162,34 +188,25 @@
       hideLoading();
     }
 
-    let stream;
-    
-    async function initCamera() {
-      if (!stream) {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        const video = document.getElementById('video');
-        video.srcObject = stream;
-        await video.play();
-      }
-    }
-    
     async function startScan() {
-      await initCamera();
-      document.getElementById('video').style.display = 'block';
-      stream.getVideoTracks().forEach(t => t.enabled = true);
-      requestAnimationFrame(tick);
-    }
-    
-    function stopScan() {
-      document.getElementById('video').style.display = 'none';
-      stream.getVideoTracks().forEach(t => t.enabled = false);
-      document.getElementById('message').innerText = '';
+      const videoId = currentMode === 'borrow' ? 'video' : 'videoReturn';
+      const video = document.getElementById(videoId);
+
+      video.style.display = 'block';
+      // เรียก initCamera ครัั้งแรกเพื่อขอสิทธิ์
+      await initCamera(video);
+      // เปิดใช้งานกล้อง (track.enabled = true)
+      enableCamera();
+      requestAnimationFrame(() => tick(video));
     }
 
+    function stopScan(video) {
+      // แค่ปิดกล้อง ไม่ stop stream จริง
+      disableCamera();
+      video.style.display = 'none';
+    }
 
-    function tick(video, stream) {
+    function tick(video) {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -208,13 +225,10 @@
             .then(device => {
               hideLoading();
               if (!device.deviceId) return alert("ไม่พบอุปกรณ์");
-              // ป้องกันสแกนซ้ำ
-              if (basket.some(i => i.deviceId === device.deviceId)) {
+              if (basket.some(i => i.deviceId === device.deviceId))
                 return alert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
-              }
-              if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน') {
+              if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน')
                 return alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
-              }
               basket.push(device);
               renderBasket();
             })
@@ -225,7 +239,10 @@
             });
         }
       }
-      if (video.srcObject) requestAnimationFrame(() => tick(video, stream));
+      // ถ้ายังเปิดกล้องอยู่ ให้วนสแกนต่อ
+      if (cameraStream && cameraStream.getVideoTracks()[0].enabled) {
+        requestAnimationFrame(() => tick(video));
+      }
     }
 
     function renderBasket() {
