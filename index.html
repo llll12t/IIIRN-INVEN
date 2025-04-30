@@ -45,23 +45,45 @@
     let basket = [];
     let _stream = null;
     let _videoStarted = false;
+    let scanning = false;
 
-async function startScan() {
+function tick() {
+  const video = document.getElementById('video');
+  if (!scanning || video.paused || video.ended) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+  if (code && code.data) {
+    scanning = false;
+    stopScan();
+    addDeviceToBasket(code.data.trim());
+    return;
+  }
+
+  requestAnimationFrame(tick);
+}
+    async function startScan() {
   const video = document.getElementById('video');
   const message = document.getElementById('message');
   message.innerText = '🔄 เปิดกล้อง สแกน QR Code...';
-
   video.style.display = 'block';
 
   try {
+    // ขอ stream ครั้งเดียวเท่านั้น
     if (!_stream) {
       _stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       video.srcObject = _stream;
     }
 
-    if (!_videoStarted) {
-      video.play();
-      _videoStarted = true;
+    // ถ้า video ไม่กำลังเล่น ให้สั่งเล่นใหม่
+    if (video.paused || video.ended) {
+      await video.play();
       requestAnimationFrame(tick);
     }
 
@@ -72,12 +94,14 @@ async function startScan() {
   }
 }
 
+
 function stopScan() {
   const video = document.getElementById('video');
-  video.pause();
+  video.pause(); // หยุดแสดงผล แต่ไม่หยุด stream
   video.style.display = 'none';
-  // ❌ อย่า stop stream เพราะ Android จะขอสิทธิ์ใหม่
+  document.getElementById('message').innerText = '';
 }
+
 
     async function fetchBorrowList() {
   try {
