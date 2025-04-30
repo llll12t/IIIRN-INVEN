@@ -39,8 +39,8 @@
       <button onclick="showPage('borrow')" class="bg-slate-800 text-white px-4 py-2 rounded w-full">ยืมอุปกรณ์</button>
       <button onclick="showPage('return')" class="bg-slate-500 text-white px-4 py-2 rounded w-full">คืนอุปกรณ์</button>
     </div>
-
-    <h2 class="text-md font-bold mb-2 p2 border rounded bg-white">📋 รายการที่กำลังยืม</h2>
+    <div class="p-2 border rounded bg-white">
+    <h2 class="text-md font-bold mb-2 ">📋 รายการที่กำลังยืม</h2>
     <table class="w-full text-sm border">
       <thead>
         <tr class="bg-gray-800 text-white">
@@ -50,7 +50,8 @@
       </thead>
       <tbody id="borrowList"></tbody>
     </table>
-  </div>
+  </div> 
+</div>
 
   <!-- หน้ายืม -->
   <div id="borrowPage" class="hidden p-4 max-w-md w-full">
