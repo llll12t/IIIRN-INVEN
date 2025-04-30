@@ -44,24 +44,41 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbxv9aZkXx1VwliXAcBMtBxMX35ZGf4hyZGqDHEUJM-m2LiTtZDLy4xf2h8wUtN0sxla/exec'; // 🔁 ใส่ URL จากการ Deploy GAS ที่นี่
     let basket = [];
     let _stream = null;
+    let _videoStarted = false;
 
-    async function startScan() {
-      const video = document.getElementById('video');
-      const message = document.getElementById('message');
-      message.innerText = '🔄 เปิดกล้อง สแกน QR Code...';
-      video.style.display = 'block';
+async function startScan() {
+  const video = document.getElementById('video');
+  const message = document.getElementById('message');
+  message.innerText = '🔄 เปิดกล้อง สแกน QR Code...';
 
-      try {
-        _stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = _stream;
-        video.play();
-        requestAnimationFrame(tick);
-      } catch (err) {
-        console.error(err);
-        message.innerText = '';
-        alert('ไม่สามารถเปิดกล้องได้: ' + err.message);
-      }
+  video.style.display = 'block';
+
+  try {
+    if (!_stream) {
+      _stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = _stream;
     }
+
+    if (!_videoStarted) {
+      video.play();
+      _videoStarted = true;
+      requestAnimationFrame(tick);
+    }
+
+  } catch (err) {
+    console.error(err);
+    message.innerText = '';
+    alert('ไม่สามารถเปิดกล้องได้: ' + err.message);
+  }
+}
+
+function stopScan() {
+  const video = document.getElementById('video');
+  video.pause();
+  video.style.display = 'none';
+  // ❌ อย่า stop stream เพราะ Android จะขอสิทธิ์ใหม่
+}
+
     async function fetchBorrowList() {
   try {
     const res = await fetch(`${API_URL}?method=getBorrowList`);
@@ -93,16 +110,8 @@ function renderBorrowList(data) {
 }
 
 
-    function stopScan() {
-      const video = document.getElementById('video');
-      video.pause();
-      video.style.display = 'none';
-      if (_stream) {
-        _stream.getTracks().forEach(t => t.stop());
-        _stream = null;
-      }
-      document.getElementById('message').innerText = '';
-    }
+
+
 
     function tick() {
       const video = document.getElementById('video');
