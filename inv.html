@@ -31,7 +31,7 @@
   <!-- หน้า Home -->
   <div id="homePage" class="p-4 max-w-md w-full">
     <div class="flex col-3">
-      <div><img id="profileImage" src="" alt="" class="w-8 h-8 rounded-full border-2"></div>
+      <div><img id="profileImage" src="" alt="" class="w-10 h-10 rounded-full border-2"></div>
       <div id="displayName" class="text-xl font-bold mb-1 pl-4"></div>
       <div id="userId" class="text-gray-500 text-sm hidden">userId</div>
     </div>
@@ -40,7 +40,7 @@
       <button onclick="showPage('return')" class="bg-slate-500 text-white px-4 py-2 rounded w-full">คืนอุปกรณ์</button>
     </div>
 
-    <h2 class="text-md font-bold mb-2">📋 รายการที่กำลังยืม</h2>
+    <h2 class="text-md font-bold mb-2 p2 border rounded bg-white">📋 รายการที่กำลังยืม</h2>
     <table class="w-full text-sm border">
       <thead>
         <tr class="bg-gray-800 text-white">
@@ -55,25 +55,25 @@
   <!-- หน้ายืม -->
   <div id="borrowPage" class="hidden p-4 max-w-md w-full">
     <div class="flex justify-between mb-4">
-      <button onclick="showPage('home')" class="bg-slate-800 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
+      <button onclick="showPage('home')" class="bg-slate-400 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
       <div class="text-md mt-2">ยืมอุปกรณ์</div>
     </div>
-    <button onclick="startScan()" class="bg-slate-800 text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
+    <button onclick="startScan()" class="bg-slate-800 text-white px-4 py-2 rounded w-full mb-2">📷 Scan QR</button>
     <video id="video" playsinline></video>
     <ul id="basketList" class="text-left text-sm mt-4"></ul>
-    <button onclick="submit('borrow')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
+    <button onclick="submit('borrow')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ ยืนยันการยืมอุปกรณ์</button>
   </div>
 
   <!-- หน้าคืน -->
   <div id="returnPage" class="hidden p-4 max-w-md w-full">
     <div class="flex justify-between mb-4">
-      <button onclick="showPage('home')" class="bg-slate-800 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
+      <button onclick="showPage('home')" class="bg-slate-400 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
       <div class="text-md mt-2">คืนอุปกรณ์</div>
     </div>
-    <button onclick="startScan()" class="bg-slate-800 text-white px-4 py-2 rounded w-full mb-2">📷 Live Scan QR</button>
+    <button onclick="startScan()" class="bg-slate-800 text-white px-4 py-2 rounded w-full mb-2">📷Scan QR</button>
     <video id="videoReturn" playsinline></video>
     <ul id="basketListReturn" class="text-left text-sm mt-4"></ul>
-    <button onclick="submit('return')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ Submit</button>
+    <button onclick="submit('return')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ ยืนยันการคืนอุปกรณ์</button>
   </div>
 
   <script>
@@ -84,6 +84,32 @@
     let userName = "";
     let basket = [];
     let currentMode = "";
+
+    // *** CAMERA STREAM REUSE ***
+    let cameraStream = null;
+
+    async function initCamera(video) {
+      if (!cameraStream) {
+        // ขอสิทธิ์และเก็บ stream ครั้งเดียว
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+      }
+      // ตั้ง srcObject ทุกครั้งที่ใช้ video element ใหม่
+      video.srcObject = cameraStream;
+      await video.play();
+    }
+
+    function enableCamera() {
+      // เปิดใช้งานแต่ไม่ขอสิทธิ์ซ้ำ
+      cameraStream.getVideoTracks().forEach(t => t.enabled = true);
+    }
+
+    function disableCamera() {
+      // ปิดกล้องโดยไม่หยุด stream จริง
+      cameraStream.getVideoTracks().forEach(t => t.enabled = false);
+    }
+    // *** END CAMERA SETUP ***
 
     // Loader
     function showLoading(text = "กำลังโหลด ..") {
@@ -124,9 +150,9 @@
     };
 
     function showPage(page) {
-      document.getElementById('homePage').classList.add('hidden');
-      document.getElementById('borrowPage').classList.add('hidden');
-      document.getElementById('returnPage').classList.add('hidden');
+      ['homePage','borrowPage','returnPage'].forEach(id =>
+        document.getElementById(id).classList.add('hidden')
+      );
       if (page === 'home') document.getElementById('homePage').classList.remove('hidden');
       if (page === 'borrow') {
         currentMode = 'borrow';
@@ -165,22 +191,22 @@
     async function startScan() {
       const videoId = currentMode === 'borrow' ? 'video' : 'videoReturn';
       const video = document.getElementById(videoId);
+
       video.style.display = 'block';
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-      video.play();
-      requestAnimationFrame(() => tick(video, stream));
+      // เรียก initCamera ครัั้งแรกเพื่อขอสิทธิ์
+      await initCamera(video);
+      // เปิดใช้งานกล้อง (track.enabled = true)
+      enableCamera();
+      requestAnimationFrame(() => tick(video));
     }
 
     function stopScan(video) {
-      if (video.srcObject) {
-        video.srcObject.getTracks().forEach(t => t.stop());
-        video.srcObject = null;
-      }
+      // แค่ปิดกล้อง ไม่ stop stream จริง
+      disableCamera();
       video.style.display = 'none';
     }
 
-    function tick(video, stream) {
+    function tick(video) {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -199,13 +225,10 @@
             .then(device => {
               hideLoading();
               if (!device.deviceId) return alert("ไม่พบอุปกรณ์");
-              // ป้องกันสแกนซ้ำ
-              if (basket.some(i => i.deviceId === device.deviceId)) {
+              if (basket.some(i => i.deviceId === device.deviceId))
                 return alert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
-              }
-              if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน') {
+              if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน')
                 return alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
-              }
               basket.push(device);
               renderBasket();
             })
@@ -216,7 +239,10 @@
             });
         }
       }
-      if (video.srcObject) requestAnimationFrame(() => tick(video, stream));
+      // ถ้ายังเปิดกล้องอยู่ ให้วนสแกนต่อ
+      if (cameraStream && cameraStream.getVideoTracks()[0].enabled) {
+        requestAnimationFrame(() => tick(video));
+      }
     }
 
     function renderBasket() {
