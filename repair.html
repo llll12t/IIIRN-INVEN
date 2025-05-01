@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>แจ้งซ่อมอุปกรณ์</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
+    <h2 class="text-xl font-bold mb-4">📋 แจ้งซ่อมอุปกรณ์</h2>
+    <div id="profileInfo" class="text-sm text-gray-600 mb-2"></div>
+
+    <input id="deviceId" class="w-full border p-2 mb-2" placeholder="รหัสอุปกรณ์" />
+    <input id="deviceName" class="w-full border p-2 mb-2" placeholder="ชื่ออุปกรณ์" />
+    <input id="topic" class="w-full border p-2 mb-2" placeholder="หัวข้อปัญหา" />
+    <textarea id="detail" class="w-full border p-2 mb-2" placeholder="รายละเอียดปัญหา" rows="4"></textarea>
+
+    <label class="text-sm">แนบรูปภาพ:</label>
+    <input id="imageInput" type="file" accept="image/*" class="mb-4 w-full" />
+
+    <button onclick="submitRepair()" class="bg-blue-600 text-white px-4 py-2 w-full rounded">✅ แจ้งซ่อม</button>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyVrI3t17jFiyQm6sfIGJl_oTK2uNEQ7HPdr8KOXtvd2NnhuxRCgV-rtigpzsBu_fQR/exec';
+    const LIFF_ID = '2007335399-E7vDd1Pr';
+
+    let userId = "", userName = "";
+
+    window.onload = async () => {
+      await liff.init({ liffId: LIFF_ID });
+      const profile = await liff.getProfile();
+      userId = profile.userId;
+
+      try {
+        const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
+        const data = await res.json();
+        userName = data.found ? data.name : prompt("กรุณากรอกชื่อของคุณ");
+      } catch (e) {
+        userName = prompt("กรุณากรอกชื่อของคุณ");
+      }
+
+      document.getElementById("profileInfo").innerText = `👤 ${userName} | 🆔 ${userId}`;
+    };
+
+    async function submitRepair() {
+      const deviceId = document.getElementById("deviceId").value.trim();
+      const deviceName = document.getElementById("deviceName").value.trim();
+      const topic = document.getElementById("topic").value.trim();
+      const detail = document.getElementById("detail").value.trim();
+      const imageFile = document.getElementById("imageInput").files[0];
+
+      if (!deviceId || !deviceName || !topic || !detail) {
+        alert("กรุณากรอกข้อมูลให้ครบ");
+        return;
+      }
+
+      let imageBase64 = "";
+      if (imageFile) {
+        imageBase64 = await toBase64(imageFile);
+      }
+
+      const payload = {
+        action: "repair",
+        userId,
+        userName,
+        deviceId,
+        deviceName,
+        topic,
+        detail,
+        imageBase64
+      };
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      const text = await res.text();
+      if (text === "success") {
+        alert("📬 แจ้งซ่อมสำเร็จ");
+        document.querySelectorAll("input, textarea").forEach(e => e.value = "");
+      } else {
+        alert("❌ แจ้งซ่อมไม่สำเร็จ: " + text);
+      }
+    }
+
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+</html>
