@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - ยืมอุปกรณ์</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <h1 class="text-xl font-bold mb-4">📋 ผู้ที่ยืมอุปกรณ์ยังไม่คืน</h1>
+  <div id="cardContainer" class="grid md:grid-cols-2 gap-4"></div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbztVQFhq8cNhFp9adiUAG43wO5kx4cppZl_uz2HzH63p9OboFPD7W_yb2SnLwXxPSf4VA/exec';
+
+    async function loadBorrowers() {
+      const res = await fetch(`${API_URL}?method=listBorrowers`);
+      const users = await res.json();
+      const container = document.getElementById("cardContainer");
+
+      for (const user of users) {
+        const borrowRes = await fetch(`${API_URL}?method=getUserBorrow&userId=${user.userId}`);
+        const borrowList = await borrowRes.json();
+
+        const card = document.createElement("div");
+        card.className = "bg-white p-4 rounded shadow";
+
+        const itemsId = `items_${user.userId}`;
+        card.innerHTML = `
+          <div class="flex justify-between items-center mb-2">
+            <div>
+              <div class="font-bold text-lg">👤 ${user.name}</div>
+              <div class="text-sm text-gray-600">${user.position} | ${borrowList.length} รายการ</div>
+            </div>
+          </div>
+          <div class="flex gap-2 mt-2">
+            <button onclick="toggleItems('${itemsId}')" class="bg-blue-500 text-white px-3 py-1 rounded text-sm">📄 ดูรายการ</button>
+            <button onclick='notify("${user.userId}", "${user.name}")' class="bg-red-600 text-white px-3 py-1 rounded text-sm">🔔 แจ้งเตือน</button>
+          </div>
+          <ul id="${itemsId}" class="mt-2 ml-4 text-sm text-gray-700 hidden list-disc list-inside">
+            ${borrowList.map(item => `<li>${item.deviceName} (${item.deviceId})</li>`).join("")}
+          </ul>
+        `;
+
+        container.appendChild(card);
+      }
+    }
+
+    function toggleItems(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle("hidden");
+    }
+
+    async function notify(userId, name) {
+      const res = await fetch(`${API_URL}?method=getUserBorrow&userId=${userId}`);
+      const devices = await res.json();
+
+      const payload = {
+        action: "notifyReturn",
+        userId,
+        name,
+        devices
+      };
+
+      const notifyRes = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      const text = await notifyRes.text();
+      if (text === "success") {
+        alert("✅ แจ้งเตือนเรียบร้อย");
+      } else {
+        alert("❌ แจ้งเตือนล้มเหลว");
+      }
+    }
+
+    window.onload = loadBorrowers;
+  </script>
+</body>
+</html>
