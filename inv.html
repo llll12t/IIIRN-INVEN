@@ -1,23 +1,14 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>ยืมคืนอุปกรณ์</title>
-
-  <!-- LINE LIFF -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
-  <!-- Tailwind Slim CDN -->
-  <script>
-    tailwind.config = {
-      theme: { extend: {} },
-      corePlugins: { preflight: true }
-    };
-  </script>
-  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .hidden { display: none; }
     #video, #videoReturn {
@@ -49,18 +40,18 @@
       <button onclick="showPage('return')" class="bg-slate-500 text-white px-4 py-2 rounded w-full">คืนอุปกรณ์</button>
     </div>
     <div class="p-2 border rounded bg-white">
-      <h2 class="text-md font-bold mb-2 ">📋 รายการที่กำลังยืม</h2>
-      <table class="w-full text-sm border">
-        <thead>
-          <tr class="bg-gray-800 text-white">
-            <th class="border px-2 py-1">รหัส</th>
-            <th class="border px-2 py-1">ชื่อ</th>
-          </tr>
-        </thead>
-        <tbody id="borrowList"></tbody>
-      </table>
-    </div>
-  </div>
+    <h2 class="text-md font-bold mb-2 ">📋 รายการที่กำลังยืม</h2>
+    <table class="w-full text-sm border">
+      <thead>
+        <tr class="bg-gray-800 text-white">
+          <th class="border px-2 py-1">รหัส</th>
+          <th class="border px-2 py-1">ชื่อ</th>
+        </tr>
+      </thead>
+      <tbody id="borrowList"></tbody>
+    </table>
+  </div> 
+</div>
 
   <!-- หน้ายืม -->
   <div id="borrowPage" class="hidden p-2 max-w-md w-full">
@@ -94,42 +85,88 @@
     let userName = "";
     let basket = [];
     let currentMode = "";
+
+    // *** CAMERA STREAM REUSE ***
     let cameraStream = null;
 
-    document.addEventListener("DOMContentLoaded", async () => {
+    async function initCamera(video) {
+      if (!cameraStream) {
+        // ขอสิทธิ์และเก็บ stream ครั้งเดียว
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+      }
+      // ตั้ง srcObject ทุกครั้งที่ใช้ video element ใหม่
+      video.srcObject = cameraStream;
+      await video.play();
+    }
+
+    function enableCamera() {
+      // เปิดใช้งานแต่ไม่ขอสิทธิ์ซ้ำ
+      cameraStream.getVideoTracks().forEach(t => t.enabled = true);
+    }
+
+    function disableCamera() {
+      // ปิดกล้องโดยไม่หยุด stream จริง
+      cameraStream.getVideoTracks().forEach(t => t.enabled = false);
+    }
+    // *** END CAMERA SETUP ***
+
+    // Loader
+    function showLoading(text = "กำลังโหลด ..") {
+      document.getElementById("loadingText").textContent = text;
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+    }
+    function hideLoading() {
+      document.getElementById("loadingOverlay").classList.add("hidden");
+    }
+
+    window.onload = async () => {
       showLoading("กำลังโหลดข้อมูลผู้ใช้ ..");
 
       await liff.init({ liffId: LIFF_ID });
       const profile = await liff.getProfile();
       userId = profile.userId;
+      document.getElementById('userId').textContent = userId;
+      document.getElementById('displayName').textContent = profile.displayName;
+      document.getElementById('profileImage').src = profile.pictureUrl || 'https://placehold.co/400x400/EEE/31343C?font=noto-sans&text=IMG';
 
       try {
-        const res = await fetch(`${API_URL}?method=getUserFullProfile&userId=${userId}`);
-        const data = await res.json();
-        userName = data.found ? data.name : prompt("ไม่พบชื่อในระบบ กรุณากรอกชื่อ:");
+        // โหลดชื่อพนักงาน + รายการยืมพร้อมกัน
+        const [resName, resBorrow] = await Promise.all([
+          fetch(`${API_URL}?method=getUserName&userId=${userId}`),
+          fetch(`${API_URL}?method=getUserBorrow&userId=${userId}`)
+        ]);
 
-        document.getElementById('displayName').textContent = userName;
-        document.getElementById('profileImage').src = profile.pictureUrl ||
-          'https://placehold.co/400x400/EEE/31343C?font=noto-sans&text=IMG';
-        document.getElementById('userId').textContent = userId;
+        const dataName = await resName.json();
+        const borrowData = await resBorrow.json();
+
+        if (dataName.found) {
+          userName = dataName.name;
+          document.getElementById('displayName').textContent = userName;
+        } else {
+          userName = prompt("ไม่พบชื่อในระบบ กรุณากรอกชื่อ:");
+          document.getElementById('displayName').textContent = userName;
+        }
+
+        // แสดงรายการที่ยืม
+        const list = document.getElementById('borrowList');
+        list.innerHTML = "";
+        borrowData.forEach(item => {
+          list.innerHTML += `<tr>
+            <td class="border px-2">${item.deviceId}</td>
+            <td class="border px-2">${item.deviceName}</td>
+          </tr>`;
+        });
 
       } catch (e) {
         console.error(e);
-        alert("ไม่สามารถดึงข้อมูลผู้ใช้ได้");
+        alert("ไม่สามารถโหลดข้อมูลได้");
       }
 
       hideLoading();
-      loadBorrowedList();
-    });
+    };
 
-    function showLoading(text = "กำลังโหลด ..") {
-      document.getElementById("loadingText").textContent = text;
-      document.getElementById("loadingOverlay").classList.remove("hidden");
-    }
-
-    function hideLoading() {
-      document.getElementById("loadingOverlay").classList.add("hidden");
-    }
 
     function showPage(page) {
       ['homePage','borrowPage','returnPage'].forEach(id =>
@@ -171,38 +208,19 @@
     }
 
     async function startScan() {
-      if (typeof jsQR === "undefined") {
-        await import("https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js");
-      }
-
       const videoId = currentMode === 'borrow' ? 'video' : 'videoReturn';
       const video = document.getElementById(videoId);
-      video.style.display = 'block';
 
+      video.style.display = 'block';
+      // เรียก initCamera ครัั้งแรกเพื่อขอสิทธิ์
       await initCamera(video);
+      // เปิดใช้งานกล้อง (track.enabled = true)
       enableCamera();
       requestAnimationFrame(() => tick(video));
     }
 
-    async function initCamera(video) {
-      if (!cameraStream) {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-      }
-      video.srcObject = cameraStream;
-      await video.play();
-    }
-
-    function enableCamera() {
-      cameraStream.getVideoTracks().forEach(t => t.enabled = true);
-    }
-
-    function disableCamera() {
-      cameraStream.getVideoTracks().forEach(t => t.enabled = false);
-    }
-
     function stopScan(video) {
+      // แค่ปิดกล้อง ไม่ stop stream จริง
       disableCamera();
       video.style.display = 'none';
     }
@@ -240,6 +258,7 @@
             });
         }
       }
+      // ถ้ายังเปิดกล้องอยู่ ให้วนสแกนต่อ
       if (cameraStream && cameraStream.getVideoTracks()[0].enabled) {
         requestAnimationFrame(() => tick(video));
       }
