@@ -5,19 +5,23 @@
   <title>แจ้งซ่อมอุปกรณ์</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 </head>
 <body class="bg-gray-100 p-4">
   <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
     <h2 class="text-xl font-bold mb-4">📋 แจ้งซ่อมอุปกรณ์</h2>
-    <div id="profileInfo" class="text-sm text-gray-600 mb-2"></div>
+    <div id="profileInfo" class="text-sm mb-4 text-gray-600"></div>
+
+    <video id="video" class="hidden w-full rounded mb-2" playsinline></video>
+    <button onclick="startScan()" class="bg-gray-800 text-white px-4 py-2 rounded mb-2 w-full">📷 สแกน QR อุปกรณ์</button>
 
     <input id="deviceId" class="w-full border p-2 mb-2" placeholder="รหัสอุปกรณ์" />
     <input id="deviceName" class="w-full border p-2 mb-2" placeholder="ชื่ออุปกรณ์" />
     <input id="topic" class="w-full border p-2 mb-2" placeholder="หัวข้อปัญหา" />
-    <textarea id="detail" class="w-full border p-2 mb-2" placeholder="รายละเอียดปัญหา" rows="4"></textarea>
+    <textarea id="detail" class="w-full border p-2 mb-2" placeholder="รายละเอียด" rows="3"></textarea>
 
     <label class="text-sm">แนบรูปภาพ:</label>
-    <input id="imageInput" type="file" accept="image/*" class="mb-4 w-full" />
+    <input type="file" id="imageInput" accept="image/*" class="mb-4 w-full" />
 
     <button onclick="submitRepair()" class="bg-blue-600 text-white px-4 py-2 w-full rounded">✅ แจ้งซ่อม</button>
   </div>
@@ -26,21 +30,16 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbyVrI3t17jFiyQm6sfIGJl_oTK2uNEQ7HPdr8KOXtvd2NnhuxRCgV-rtigpzsBu_fQR/exec';
     const LIFF_ID = '2007335399-E7vDd1Pr';
 
-    let userId = "", userName = "";
+    let userId = "", userName = "", cameraStream = null;
 
     window.onload = async () => {
       await liff.init({ liffId: LIFF_ID });
       const profile = await liff.getProfile();
       userId = profile.userId;
 
-      try {
-        const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
-        const data = await res.json();
-        userName = data.found ? data.name : prompt("กรุณากรอกชื่อของคุณ");
-      } catch (e) {
-        userName = prompt("กรุณากรอกชื่อของคุณ");
-      }
-
+      const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
+      const data = await res.json();
+      userName = data.found ? data.name : prompt("กรุณากรอกชื่อคุณ");
       document.getElementById("profileInfo").innerText = `👤 ${userName} | 🆔 ${userId}`;
     };
 
@@ -49,26 +48,22 @@
       const deviceName = document.getElementById("deviceName").value.trim();
       const topic = document.getElementById("topic").value.trim();
       const detail = document.getElementById("detail").value.trim();
-      const imageFile = document.getElementById("imageInput").files[0];
+      const file = document.getElementById("imageInput").files[0];
 
       if (!deviceId || !deviceName || !topic || !detail) {
-        alert("กรุณากรอกข้อมูลให้ครบ");
-        return;
+        return alert("กรุณากรอกข้อมูลให้ครบ");
       }
 
       let imageBase64 = "";
-      if (imageFile) {
-        imageBase64 = await toBase64(imageFile);
+      if (file) {
+        imageBase64 = await toBase64(file);
       }
 
       const payload = {
         action: "repair",
-        userId,
-        userName,
-        deviceId,
-        deviceName,
-        topic,
-        detail,
+        userId, userName,
+        deviceId, deviceName,
+        topic, detail,
         imageBase64
       };
 
@@ -79,10 +74,10 @@
 
       const text = await res.text();
       if (text === "success") {
-        alert("📬 แจ้งซ่อมสำเร็จ");
+        alert("✅ แจ้งซ่อมสำเร็จ");
         document.querySelectorAll("input, textarea").forEach(e => e.value = "");
       } else {
-        alert("❌ แจ้งซ่อมไม่สำเร็จ: " + text);
+        alert("❌ เกิดข้อผิดพลาด: " + text);
       }
     }
 
@@ -90,9 +85,54 @@
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
+        reader.onerror = e => reject(e);
         reader.readAsDataURL(file);
       });
+    }
+
+    async function startScan() {
+      const video = document.getElementById("video");
+      video.classList.remove("hidden");
+      if (!cameraStream) {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      }
+      video.srcObject = cameraStream;
+      video.play();
+      requestAnimationFrame(() => scanQR(video));
+    }
+
+    function scanQR(video) {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+        if (code) {
+          stopScan(video);
+          const deviceId = code.data.trim();
+          fetch(`${API_URL}?method=getDevice&deviceId=${deviceId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.deviceId) {
+                document.getElementById("deviceId").value = data.deviceId;
+                document.getElementById("deviceName").value = data.deviceName;
+              } else {
+                alert("ไม่พบอุปกรณ์");
+              }
+            });
+        }
+      }
+      if (cameraStream?.getVideoTracks()[0].enabled) {
+        requestAnimationFrame(() => scanQR(video));
+      }
+    }
+
+    function stopScan(video) {
+      cameraStream.getVideoTracks().forEach(track => track.enabled = false);
+      video.classList.add("hidden");
     }
   </script>
 </body>
