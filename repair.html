@@ -1,27 +1,42 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>แจ้งซ่อมอุปกรณ์</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 </head>
-<body class="bg-gray-100 p-4">
+<body class="bg-gray-100 p-4 relative">
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white px-4 py-2 rounded shadow text-center">
+      <span id="loadingText" class="text-gray-800">กำลังโหลด ..</span>
+    </div>
+  </div>
+
   <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
     <h2 class="text-xl font-bold mb-4">📋 แจ้งซ่อมอุปกรณ์</h2>
-    <div id="profileInfo" class="text-sm mb-4 text-gray-600"></div>
+    <div id="profileInfo" class="text-sm text-gray-700 mb-4"></div>
 
+    <!-- สแกน QR -->
     <video id="video" class="hidden w-full rounded mb-2" playsinline></video>
-    <button onclick="startScan()" class="bg-gray-800 text-white px-4 py-2 rounded mb-2 w-full">📷 สแกน QR อุปกรณ์</button>
+    <button onclick="startScan()" class="bg-gray-800 text-white px-4 py-2 rounded mb-2 w-full">
+      📷 สแกน QR อุปกรณ์
+    </button>
 
+    <!-- ฟอร์มกรอก -->
     <input id="deviceId" class="w-full border p-2 mb-2" placeholder="รหัสอุปกรณ์" />
     <input id="deviceName" class="w-full border p-2 mb-2" placeholder="ชื่ออุปกรณ์" />
     <input id="topic" class="w-full border p-2 mb-2" placeholder="หัวข้อปัญหา" />
-    <textarea id="detail" class="w-full border p-2 mb-2" placeholder="รายละเอียด" rows="3"></textarea>
+    <textarea id="detail" class="w-full border p-2 mb-2" placeholder="รายละเอียดปัญหา" rows="3"></textarea>
 
     <label class="text-sm">แนบรูปภาพ:</label>
-    <input type="file" id="imageInput" accept="image/*" class="mb-4 w-full" />
+    <input id="imageInput" type="file" accept="image/*" class="mb-4 w-full" />
 
     <button onclick="submitRepair()" class="bg-blue-600 text-white px-4 py-2 w-full rounded">✅ แจ้งซ่อม</button>
   </div>
@@ -30,17 +45,40 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbyVrI3t17jFiyQm6sfIGJl_oTK2uNEQ7HPdr8KOXtvd2NnhuxRCgV-rtigpzsBu_fQR/exec';
     const LIFF_ID = '2007335399-E7vDd1Pr';
 
-    let userId = "", userName = "", cameraStream = null;
+    let userId = "", userName = "", userPosition = "", cameraStream = null;
+
+    function showLoading(text = "กำลังโหลด ..") {
+      document.getElementById("loadingText").textContent = text;
+      document.getElementById("loadingOverlay").classList.remove("hidden");
+    }
+
+    function hideLoading() {
+      document.getElementById("loadingOverlay").classList.add("hidden");
+    }
 
     window.onload = async () => {
+      showLoading("กำลังโหลดข้อมูลผู้ใช้ ..");
       await liff.init({ liffId: LIFF_ID });
       const profile = await liff.getProfile();
       userId = profile.userId;
 
-      const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
-      const data = await res.json();
-      userName = data.found ? data.name : prompt("กรุณากรอกชื่อคุณ");
-      document.getElementById("profileInfo").innerText = `👤 ${userName} | 🆔 ${userId}`;
+      try {
+        const res = await fetch(`${API_URL}?method=getUserName&userId=${userId}`);
+        const data = await res.json();
+        if (data.found) {
+          userName = data.name;
+          userPosition = data.position;
+        } else {
+          userName = prompt("กรุณากรอกชื่อของคุณ:");
+          userPosition = prompt("กรุณากรอกตำแหน่งของคุณ:");
+        }
+      } catch (e) {
+        userName = prompt("กรุณากรอกชื่อของคุณ:");
+        userPosition = prompt("กรุณากรอกตำแหน่งของคุณ:");
+      }
+
+      document.getElementById("profileInfo").innerText = `👤 ${userName} (${userPosition})`;
+      hideLoading();
     };
 
     async function submitRepair() {
@@ -55,26 +93,29 @@
       }
 
       let imageBase64 = "";
-      if (file) {
-        imageBase64 = await toBase64(file);
-      }
+      if (file) imageBase64 = await toBase64(file);
 
       const payload = {
         action: "repair",
-        userId, userName,
-        deviceId, deviceName,
-        topic, detail,
+        userId,
+        userName,
+        deviceId,
+        deviceName,
+        topic,
+        detail,
         imageBase64
       };
 
+      showLoading("กำลังบันทึกข้อมูล ..");
       const res = await fetch(API_URL, {
         method: "POST",
         body: JSON.stringify(payload)
       });
-
       const text = await res.text();
+      hideLoading();
+
       if (text === "success") {
-        alert("✅ แจ้งซ่อมสำเร็จ");
+        alert("📬 แจ้งซ่อมสำเร็จ");
         document.querySelectorAll("input, textarea").forEach(e => e.value = "");
       } else {
         alert("❌ เกิดข้อผิดพลาด: " + text);
@@ -113,15 +154,21 @@
         if (code) {
           stopScan(video);
           const deviceId = code.data.trim();
+          showLoading("กำลังค้นหาอุปกรณ์ ..");
           fetch(`${API_URL}?method=getDevice&deviceId=${deviceId}`)
             .then(res => res.json())
             .then(data => {
+              hideLoading();
               if (data.deviceId) {
                 document.getElementById("deviceId").value = data.deviceId;
                 document.getElementById("deviceName").value = data.deviceName;
               } else {
                 alert("ไม่พบอุปกรณ์");
               }
+            })
+            .catch(err => {
+              hideLoading();
+              alert("เกิดข้อผิดพลาด");
             });
         }
       }
