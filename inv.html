@@ -65,7 +65,7 @@
 
     <!-- Custom Alert Box -->
         <div id="customAlert" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-        <div class="bg-white p-6 rounded-lg shadow text-center text-blue-900 font-semibold flex flex-col items-center">
+        <div class="bg-white p-6  min-w-48 rounded-lg shadow text-center text-blue-900 font-semibold flex flex-col items-center">
             <div id="alertIcon" class="text-4xl mb-2">🔔</div>
             <div id="alertMessage" class="text-gray-800 text-md font-medium mb-4">ข้อความแจ้งเตือน</div>
             <button onclick="hideAlert()" class="bg-slate-800 text-white px-4 py-2 rounded">ตกลง</button>
@@ -306,11 +306,11 @@
                         .then(r => r.json())
                         .then(device => {
                              showLoading(false);
-                            if (!device.deviceId) return showAlert("ไม่พบอุปกรณ์");
+                            if (!device.deviceId) return showAlert("ไม่พบอุปกรณ์","");
                             if (basket.some(i => i.deviceId === device.deviceId))
-                                return showAlert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
+                                return showAlert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว","");
                             if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน')
-                                return showAlert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
+                                return showAlert("อุปกรณ์นี้ถูกยืมอยู่แล้ว","");
                             basket.push(device);
                             renderBasket();
                         })
@@ -345,7 +345,7 @@
         }
 
         async function submit(action) {
-            if (!basket.length) return alert("ยังไม่มีอุปกรณ์ในตะกร้า");
+            if (!basket.length) return showAlert("ยังไม่มีอุปกรณ์ในตะกร้า","");
             const payload = { action, userId, userName, basket };
             showLoading(true);
             try {
@@ -356,13 +356,13 @@
                 const text = await res.text();
                 showLoading(false);
                 if (text.includes("success")) {
-                    showAlert("✅ บันทึกสำเร็จ");
+                    showAlert("บันทึกสำเร็จ","");
                     basket = [];
                     renderBasket();
                     showPage('home');
                     loadBorrowedList();
                 } else {
-                    showAlert("ผิดพลาด");
+                    showAlert("ผิดพลาด","");
 
                 }
             } catch (e) {
