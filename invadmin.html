@@ -1,33 +1,74 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - ยืมอุปกรณ์</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <title>Admin - ยืมอุปกรณ์</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .dot {
+            animation: dot-flash 1.4s infinite;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes dot-flash {
+
+            0%,
+            80%,
+            100% {
+                opacity: 0.3;
+            }
+
+            40% {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
+
 <body class="bg-gray-100 p-4">
-  <h1 class="text-xl font-bold mb-4">📋 ผู้ที่ยืมอุปกรณ์ยังไม่คืน</h1>
-  <div id="cardContainer" class="grid md:grid-cols-2 gap-4"></div>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow text-center text-blue-900 font-semibold flex flex-col items-center">
+            <div class="flex space-x-1 mb-2">
+                <div class="dot w-2 h-2 bg-blue-800 rounded-full"></div>
+                <div class="dot w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div class="dot w-2 h-2 bg-blue-300 rounded-full"></div>
+            </div>
+            <span>Loading..</span>
+        </div>
+    </div>
+    <h1 class="text-xl font-bold mb-4">📋 ผู้ที่ยืมอุปกรณ์ยังไม่คืน</h1>
+    <div id="cardContainer" class="grid md:grid-cols-2 gap-4"></div>
 
-  <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbztVQFhq8cNhFp9adiUAG43wO5kx4cppZl_uz2HzH63p9OboFPD7W_yb2SnLwXxPSf4VA/exec';
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbztVQFhq8cNhFp9adiUAG43wO5kx4cppZl_uz2HzH63p9OboFPD7W_yb2SnLwXxPSf4VA/exec';
 
-    async function loadBorrowers() {
-      const res = await fetch(`${API_URL}?method=listBorrowers`);
-      const users = await res.json();
-      const container = document.getElementById("cardContainer");
+        async function loadBorrowers() {
+            showLoading(true);
 
-      for (const user of users) {
-        const borrowRes = await fetch(`${API_URL}?method=getUserBorrow&userId=${user.userId}`);
-        const borrowList = await borrowRes.json();
+            const res = await fetch(`${API_URL}?method=listBorrowers`);
+            const users = await res.json();
+            const container = document.getElementById("cardContainer");
 
-        const card = document.createElement("div");
-        card.className = "bg-white p-4 rounded shadow";
+            for (const user of users) {
+                const borrowRes = await fetch(`${API_URL}?method=getUserBorrow&userId=${user.userId}`);
+                const borrowList = await borrowRes.json();
 
-        const itemsId = `items_${user.userId}`;
-        card.innerHTML = `
+                const card = document.createElement("div");
+                card.className = "bg-white p-4 rounded shadow";
+
+                const itemsId = `items_${user.userId}`;
+                card.innerHTML = `
           <div class="flex justify-between items-center mb-2">
             <div>
               <div class="font-bold text-lg">👤 ${user.name}</div>
@@ -43,40 +84,51 @@
           </ul>
         `;
 
-        container.appendChild(card);
-      }
-    }
+                container.appendChild(card);
+                showLoading(false);
 
-    function toggleItems(id) {
-      const el = document.getElementById(id);
-      el.classList.toggle("hidden");
-    }
+            }
+        }
 
-    async function notify(userId, name) {
-      const res = await fetch(`${API_URL}?method=getUserBorrow&userId=${userId}`);
-      const devices = await res.json();
+        function toggleItems(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle("hidden");
+        }
 
-      const payload = {
-        action: "notifyReturn",
-        userId,
-        name,
-        devices
-      };
+        async function notify(userId, name) {
+            showLoading(true);
+            const res = await fetch(`${API_URL}?method=getUserBorrow&userId=${userId}`);
+            const devices = await res.json();
 
-      const notifyRes = await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
+            const payload = {
+                action: "notifyReturn",
+                userId,
+                name,
+                devices
+            };
 
-      const text = await notifyRes.text();
-      if (text === "success") {
-        alert("✅ แจ้งเตือนเรียบร้อย");
-      } else {
-        alert("❌ แจ้งเตือนล้มเหลว");
-      }
-    }
+            const notifyRes = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
 
-    window.onload = loadBorrowers;
-  </script>
+            const text = await notifyRes.text();
+            if (text === "success") {
+                alert("✅ แจ้งเตือนเรียบร้อย");
+            } else {
+                alert("❌ แจ้งเตือนล้มเหลว");
+            }
+            showLoading(false);
+
+        }
+
+        function showLoading(state = true) {
+            document.getElementById("loadingOverlay").classList.toggle("hidden", !state);
+        }
+
+
+        window.onload = loadBorrowers;
+    </script>
 </body>
+
 </html>
