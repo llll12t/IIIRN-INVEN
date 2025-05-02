@@ -34,35 +34,21 @@
 </div>
 
   <div class="max-w-screen-xl mx-auto px-4 py-6">
-    <h1 class="text-2xl font-bold mb-6">📊 Dashboard - ระบบยืมคืน / แจ้งซ่อม</h1>
+    <h1 class="text-lg font-bold mb-6">📊 Dashboard - ระบบยืมคืน / แจ้งซ่อม</h1>
 
     <div id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
 
-    <h2 class="text-xl font-bold mb-2">📦 พนักงานที่ยังไม่คืนอุปกรณ์</h2>
+    <h2 class="text-lg font-bold mb-2">📦 พนักงานที่ยังไม่คืนอุปกรณ์</h2>
     <div id="borrowerCards" class="grid md:grid-cols-2 gap-4 mb-6"></div>
 
-    <h2 class="text-xl font-bold mb-2">🛠️ รายการแจ้งซ่อมล่าสุด</h2>
-    <table class="min-w-full text-sm border border-gray-300 bg-white mb-8">
-      <thead class="bg-gray-200 text-left">
-        <tr>
-          <th class="border px-2 py-1">วันที่</th>
-          <th class="border px-2 py-1">อุปกรณ์</th>
-          <th class="border px-2 py-1">หัวข้อ</th>
-          <th class="border px-2 py-1">สถานะ</th>
-          <th class="border px-2 py-1">ที่อยู่</th>
-          <th class="border px-2 py-1">วันที่รับคืน</th>
-          <th class="border px-2 py-1">การแก้ไข</th>
-          <th class="border px-2 py-1">ค่าใช้จ่าย</th>
-          <th class="border px-2 py-1">อัปเดต</th>
-        </tr>
-      </thead>
-      <tbody id="repairTable"></tbody>
-    </table>
+    <h2 class="text-lg font-bold mb-2">🛠️ รายการแจ้งซ่อมล่าสุด</h2>
+    <div id="repairCards" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"></div>
+    
   </div>
 
   <!-- Modal -->
-  <div id="editModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 hidden">
-    <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
+<div id="editModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 hidden">
+  <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
       <h2 class="text-lg font-bold mb-4">🛠️ อัปเดตแจ้งซ่อม</h2>
       <input type="hidden" id="editRow">
       <input type="hidden" id="editDeviceId">
@@ -147,25 +133,36 @@
         borrowerCards.appendChild(el);
       }
 
-      const tbody = document.getElementById("repairTable");
-      tbody.innerHTML = "";
-      repairs.forEach(r => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="border px-2 py-1">${r.date}</td>
-          <td class="border px-2 py-1">${r.deviceName}</td>
-          <td class="border px-2 py-1">${r.topic}</td>
-          <td class="border px-2 py-1">${r.status}</td>
-          <td class="border px-2 py-1">${r.location}</td>
-          <td class="border px-2 py-1">${r.fixDate}</td>
-          <td class="border px-2 py-1">${r.solution}</td>
-          <td class="border px-2 py-1">${r.cost}</td>
-          <td class="border px-2 py-1 text-center">
-            <button onclick="editRepair(${r.row})" class="text-blue-600 underline">แก้ไข</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
+      const container = document.getElementById("repairCards");
+container.innerHTML = "";
+repairs.forEach(r => {
+  const card = document.createElement("div");
+  card.className = "bg-white p-4 rounded shadow border border-gray-200";
+
+  card.innerHTML = `
+    <div class="flex justify-between items-center mb-2">
+      <div class="text-sm font-semibold text-gray-700">${r.deviceName}</div>
+      <span class="text-xs px-2 py-1 rounded bg-gray-200">${r.status}</span>
+    </div>
+    <div class="flex space-x-2">
+<div >
+    <div class="text-sm text-gray-600 mb-1">📅 วันที่แจ้ง: ${r.date}</div>
+    <div class="text-sm text-gray-600 mb-1">🔧 หัวข้อ: ${r.topic}</div>
+    <div class="text-sm text-gray-600 mb-1">📍 สถานที่: ${r.location}</div>
+    </div>
+    <div >
+    <div class="text-sm text-gray-600 mb-1">🗓️ วันที่รับคืน: ${r.fixDate}</div>
+    <div class="text-sm text-gray-600 mb-1">💡 การแก้ไข: ${r.solution}</div>
+    <div class="text-sm text-gray-600 mb-1">💰 ค่าใช้จ่าย: ${r.cost}</div>
+    </div>
+    </div>
+    <div class="text-right mt-2">
+      <button onclick="editRepair(${r.row})" class="text-blue-600 text-sm underline">✏️ แก้ไข</button>
+    </div>
+  `;
+  container.appendChild(card);
+});
+
 
       showLoading(false);
     }
