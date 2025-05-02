@@ -65,10 +65,10 @@
 
     <!-- Custom Alert Box -->
         <div id="customAlert" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg p-6 w-full max-w-sm text-center shadow-lg">
+        <div class="bg-white p-6 rounded-lg shadow text-center text-blue-900 font-semibold flex flex-col items-center">
             <div id="alertIcon" class="text-4xl mb-2">🔔</div>
-            <div id="alertMessage" class="text-gray-800 text-lg font-medium mb-4">ข้อความแจ้งเตือน</div>
-            <button onclick="hideAlert()" class="bg-blue-600 text-white px-4 py-2 rounded">ตกลง</button>
+            <div id="alertMessage" class="text-gray-800 text-md font-medium mb-4">ข้อความแจ้งเตือน</div>
+            <button onclick="hideAlert()" class="bg-slate-800 text-white px-4 py-2 rounded">ตกลง</button>
         </div>
         </div>
 
@@ -306,18 +306,18 @@
                         .then(r => r.json())
                         .then(device => {
                              showLoading(false);
-                            if (!device.deviceId) return alert("ไม่พบอุปกรณ์");
+                            if (!device.deviceId) return showAlert("ไม่พบอุปกรณ์");
                             if (basket.some(i => i.deviceId === device.deviceId))
-                                return alert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
+                                return showAlert("อุปกรณ์นี้อยู่ในตะกร้าแล้ว");
                             if (currentMode === 'borrow' && device.status === 'กำลังใช้งาน')
-                                return alert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
+                                return showAlert("อุปกรณ์นี้ถูกยืมอยู่แล้ว");
                             basket.push(device);
                             renderBasket();
                         })
                         .catch(e => {
                             showLoading(false);
                             console.error(e);
-                            alert("เกิดข้อผิดพลาดในการค้นหาอุปกรณ์");
+                            showAlert("เกิดข้อผิดพลาดในการค้นหาอุปกรณ์");
                         });
                 }
             }
@@ -356,19 +356,19 @@
                 const text = await res.text();
                 showLoading(false);
                 if (text.includes("success")) {
-                    showAlert("✅ บันทึกสำเร็จ", "✅");
+                    showAlert("✅ บันทึกสำเร็จ");
                     basket = [];
                     renderBasket();
                     showPage('home');
                     loadBorrowedList();
                 } else {
-                    showAlert("ผิดพลาด", "");
+                    showAlert("ผิดพลาด");
 
                 }
             } catch (e) {
                 showLoading(false);
                 console.error(e);
-                showAlert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้", "");
+                showAlert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
             }
         }
 
