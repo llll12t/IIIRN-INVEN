@@ -21,24 +21,26 @@
 
   <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
     <h2 class="text-xl font-bold mb-4">📋 แจ้งซ่อมอุปกรณ์</h2>
-    <div id="profileInfo" class="text-sm text-gray-700 mb-4"></div>
+    <div id="profileInfo" class="text-md text-gray-700 mb-4"></div>
 
     <!-- สแกน QR -->
     <video id="video" class="hidden w-full rounded mb-2" playsinline></video>
-    <button onclick="startScan()" class="bg-gray-800 text-white px-4 py-2 rounded mb-2 w-full">
+    <button onclick="startScan()" class="bg-gray-800 text-white p-4 rounded-full mb-4 w-full">
       📷 สแกน QR อุปกรณ์
     </button>
 
     <!-- ฟอร์มกรอก -->
-    <input id="deviceId" class="w-full border p-2 mb-2" placeholder="รหัสอุปกรณ์" />
-    <input id="deviceName" class="w-full border p-2 mb-2" placeholder="ชื่ออุปกรณ์" />
-    <input id="topic" class="w-full border p-2 mb-2" placeholder="หัวข้อปัญหา" />
-    <textarea id="detail" class="w-full border p-2 mb-2" placeholder="รายละเอียดปัญหา" rows="3"></textarea>
+     <div class="p-2 bg-white">
+    <input id="deviceId" class="w-full border rounded-lg p-2 mb-2" placeholder="รหัสอุปกรณ์" />
+    <input id="deviceName" class="w-full border rounded-lg p-2 mb-2" placeholder="ชื่ออุปกรณ์" />
+    <input id="topic" class="w-full border p-2 rounded-lg mb-2" placeholder="หัวข้อปัญหา" />
+    <textarea id="detail" class="w-full border rounded-lg p-2 mb-2" placeholder="รายละเอียดปัญหา" rows="3"></textarea>
 
     <label class="text-sm">แนบรูปภาพ:</label>
-    <input id="imageInput" type="file" accept="image/*" class="mb-4 w-full" />
+    <input id="imageInput" type="file" accept="image/*" class="my-4 w-full p-4" />
 
-    <button onclick="submitRepair()" class="bg-blue-600 text-white px-4 py-2 w-full rounded">✅ แจ้งซ่อม</button>
+    <button onclick="submitRepair()" class="bg-green-600 text-white p-4 w-full rounded-full">✅ แจ้งซ่อม</button>
+     </div>
   </div>
 
   <script>
