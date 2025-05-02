@@ -33,19 +33,15 @@
   </div>
 </div>
 
-<div class="max-w-screen-xl mx-auto px-4 py-6">
-  <h1 class="text-2xl font-bold mb-6">📊 Dashboard - ระบบยืมคืน / แจ้งซ่อม</h1>
+  <div class="max-w-screen-xl mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold mb-6">📊 Dashboard - ระบบยืมคืน / แจ้งซ่อม</h1>
 
-  <!-- Summary Cards -->
-  <div id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+    <div id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
 
-  <!-- Borrowers Section -->
-  <h2 class="text-xl font-bold mb-2">📦 พนักงานที่ยังไม่คืนอุปกรณ์</h2>
-  <div id="borrowerCards" class="grid md:grid-cols-2 gap-4 mb-6"></div>
+    <h2 class="text-xl font-bold mb-2">📦 พนักงานที่ยังไม่คืนอุปกรณ์</h2>
+    <div id="borrowerCards" class="grid md:grid-cols-2 gap-4 mb-6"></div>
 
-  <!-- Repairs Table -->
-  <h2 class="text-xl font-bold mb-2">🛠️ รายการแจ้งซ่อมล่าสุด</h2>
-  <div class="overflow-x-auto">
+    <h2 class="text-xl font-bold mb-2">🛠️ รายการแจ้งซ่อมล่าสุด</h2>
     <table class="min-w-full text-sm border border-gray-300 bg-white mb-8">
       <thead class="bg-gray-200 text-left">
         <tr>
@@ -63,174 +59,191 @@
       <tbody id="repairTable"></tbody>
     </table>
   </div>
-</div>
 
-<!-- Edit Modal -->
-<div id="editModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 hidden">
-  <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
-    <h2 class="text-lg font-bold mb-4">🛠️ อัปเดตการแจ้งซ่อม</h2>
-    <input type="hidden" id="editRow">
-    <div id="editDevice" class="mb-2 text-gray-700 font-medium"></div>
-
-    <select id="editStatus" class="w-full border p-2 mb-2">
-      <option value="รอดำเนินการ">รอดำเนินการ</option>
-      <option value="ส่งซ่อม">ส่งซ่อม</option>
-      <option value="ซ่อมเสร็จ">ซ่อมเสร็จ</option>
-    </select>
-
-    <input id="editLocation" class="w-full border p-2 mb-2" placeholder="ที่อยู่ / สถานที่ซ่อม">
-    <input id="editFixDate" type="date" class="w-full border p-2 mb-2">
-    <input id="editSolution" class="w-full border p-2 mb-2" placeholder="การแก้ไข">
-    <input id="editCost" class="w-full border p-2 mb-2" placeholder="ค่าใช้จ่าย (บาท)">
-
-    <div class="flex gap-2 justify-end mt-4">
-      <button onclick="submitRepairUpdate()" class="bg-green-600 text-white px-4 py-2 rounded">💾 บันทึก</button>
-      <button onclick="closeModal()" class="bg-gray-500 text-white px-4 py-2 rounded">ปิด</button>
+  <!-- Modal -->
+  <div id="editModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 hidden">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
+      <h2 class="text-lg font-bold mb-4">🛠️ อัปเดตแจ้งซ่อม</h2>
+      <input type="hidden" id="editRow">
+      <input type="hidden" id="editDeviceId">
+      <input type="text" id="editResponsible" placeholder="ผู้รับผิดชอบ" class="w-full border p-2 mb-2">
+      <input type="date" id="editSendDate" class="w-full border p-2 mb-2">
+      <select id="editStatus" class="w-full border p-2 mb-2">
+        <option value="รอดำเนินการ">รอดำเนินการ</option>
+        <option value="ส่งซ่อม">ส่งซ่อม</option>
+        <option value="ซ่อมเสร็จ">ซ่อมเสร็จ</option>
+      </select>
+      <input id="editLocation" class="w-full border p-2 mb-2" placeholder="ที่อยู่ / สถานที่ซ่อม">
+      <input id="editFixDate" type="date" class="w-full border p-2 mb-2">
+      <input id="editSolution" class="w-full border p-2 mb-2" placeholder="การแก้ไข">
+      <input id="editCost" class="w-full border p-2 mb-2" placeholder="ค่าใช้จ่าย (บาท)">
+      <input type="file" id="editImage" class="w-full mb-2">
+      <div class="flex justify-end gap-2">
+        <button onclick="submitRepairUpdate()" class="bg-green-600 text-white px-4 py-2 rounded">💾 บันทึก</button>
+        <button onclick="closeModal()" class="bg-gray-500 text-white px-4 py-2 rounded">ปิด</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-const API = 'https://script.google.com/macros/s/AKfycbyDKVSEwpiAspVQQkS5UMq7964Pa_nmKvrormbQvUc8mECN9vfbxnEppxmHuQN6OBBV/exec';
+  <script>
+    const API = 'https://script.google.com/macros/s/AKfycbyDKVSEwpiAspVQQkS5UMq7964Pa_nmKvrormbQvUc8mECN9vfbxnEppxmHuQN6OBBV/exec';
 
-function showLoading(state = true) {
-  document.getElementById("loadingOverlay").classList.toggle("hidden", !state);
-}
+    function showLoading(state = true) {
+      document.getElementById("loadingOverlay").classList.toggle("hidden", !state);
+    }
 
-function toggle(id) {
-  document.getElementById(id).classList.toggle("hidden");
-}
+    function closeModal() {
+      document.getElementById("editModal").classList.add("hidden");
+    }
 
-async function loadDashboard() {
-  showLoading(true);
-  const [summary, borrowers, repairs] = await Promise.all([
-    fetch(`${API}?method=dashboard`).then(res => res.json()),
-    fetch(`${API}?method=listBorrowers`).then(res => res.json()),
-    fetch(`${API}?method=recentRepairs`).then(res => res.json())
-  ]);
+    function toInputDate(text) {
+      if (!text || !text.includes("-")) return "";
+      const [d, m, y] = text.split("-");
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
 
-  document.getElementById("summaryCards").innerHTML = `
-    ${createCard("👤 ผู้ยืม", summary.usersBorrowing, 'bg-blue-500')}
-    ${createCard("📦 ยังไม่คืน", summary.totalBorrow, 'bg-yellow-500')}
-    ${createCard("🛠️ แจ้งซ่อม", summary.repairPending, 'bg-red-500')}
-    ${createCard("✅ ซ่อมเสร็จ", summary.repairDone, 'bg-green-500')}
-  `;
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
 
-  const borrowerCards = document.getElementById("borrowerCards");
-  borrowerCards.innerHTML = "";
-  await Promise.all(borrowers.map(async user => {
-    const list = await fetch(`${API}?method=getUserBorrow&userId=${user.userId}`).then(r => r.json());
-    const id = `borrow_${user.userId}`;
-    const el = document.createElement("div");
-    el.className = "bg-white p-4 rounded shadow";
-    el.innerHTML = `
-      <div class="font-bold text-lg">👤 ${user.name}</div>
-      <div class="text-sm text-gray-600 mb-2">${user.position} | ${list.length} รายการ</div>
-      <div class="flex gap-2">
-        <button onclick="toggle('${id}')" class="bg-blue-500 text-white px-3 py-1 rounded text-sm">📄 ดู</button>
-        <button onclick='notify("${user.userId}", "${user.name}")' class="bg-red-600 text-white px-3 py-1 rounded text-sm">🔔 แจ้งเตือน</button>
-      </div>
-      <ul id="${id}" class="hidden list-disc ml-5 mt-2 text-sm text-gray-700">
-        ${list.map(b => `<li>${b.deviceName} (${b.deviceId})</li>`).join("")}
-      </ul>
-    `;
-    borrowerCards.appendChild(el);
-  }));
+    async function loadDashboard() {
+      showLoading(true);
+      const [summary, borrowers, repairs] = await Promise.all([
+        fetch(`${API}?method=dashboard`).then(r => r.json()),
+        fetch(`${API}?method=listBorrowers`).then(r => r.json()),
+        fetch(`${API}?method=recentRepairs`).then(r => r.json())
+      ]);
 
-  const tbody = document.getElementById("repairTable");
-  tbody.innerHTML = "";
-  repairs.forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="border px-2 py-1">${r.date}</td>
-      <td class="border px-2 py-1">${r.deviceName}</td>
-      <td class="border px-2 py-1">${r.topic}</td>
-      <td class="border px-2 py-1">${r.status}</td>
-      <td class="border px-2 py-1">${r.location}</td>
-      <td class="border px-2 py-1">${r.fixDate}</td>
-      <td class="border px-2 py-1">${r.solution}</td>
-      <td class="border px-2 py-1">${r.cost}</td>
-      <td class="border px-2 py-1 text-center">
-        <button onclick="editRepair(${r.row})" class="text-blue-600 underline text-sm">แก้ไข</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+      document.getElementById("summaryCards").innerHTML = `
+        ${createCard("👤 ผู้ยืม", summary.usersBorrowing, 'bg-blue-500')}
+        ${createCard("📦 ยังไม่คืน", summary.totalBorrow, 'bg-yellow-500')}
+        ${createCard("🛠️ แจ้งซ่อม", summary.repairPending, 'bg-red-500')}
+        ${createCard("✅ ซ่อมเสร็จ", summary.repairDone, 'bg-green-500')}
+      `;
 
-  showLoading(false);
-}
+      const borrowerCards = document.getElementById("borrowerCards");
+      borrowerCards.innerHTML = "";
+      for (const user of borrowers) {
+        const list = await fetch(`${API}?method=getUserBorrow&userId=${user.userId}`).then(r => r.json());
+        const id = `borrow_${user.userId}`;
+        const el = document.createElement("div");
+        el.className = "bg-white p-4 rounded shadow";
+        el.innerHTML = `
+          <div class="font-bold text-lg">👤 ${user.name}</div>
+          <div class="text-sm text-gray-600 mb-2">${user.position} | ${list.length} รายการ</div>
+          <div class="flex gap-2">
+            <button onclick="toggleList('${id}')" class="bg-blue-500 text-white px-3 py-1 rounded text-sm">📄 ดู</button>
+            <button onclick='notify("${user.userId}", "${user.name}")' class="bg-red-600 text-white px-3 py-1 rounded text-sm">🔔 แจ้งเตือน</button>
+          </div>
+          <ul id="${id}" class="hidden list-disc ml-5 mt-2 text-sm text-gray-700">
+            ${list.map(b => `<li>${b.deviceName} (${b.deviceId})</li>`).join("")}
+          </ul>
+        `;
+        borrowerCards.appendChild(el);
+      }
 
-function createCard(title, value, color) {
-  return `
-    <div class="${color} text-white p-4 rounded shadow text-center">
-      <div class="text-xl font-bold">${value}</div>
-      <div class="text-sm">${title}</div>
-    </div>
-  `;
-}
+      const tbody = document.getElementById("repairTable");
+      tbody.innerHTML = "";
+      repairs.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="border px-2 py-1">${r.date}</td>
+          <td class="border px-2 py-1">${r.deviceName}</td>
+          <td class="border px-2 py-1">${r.topic}</td>
+          <td class="border px-2 py-1">${r.status}</td>
+          <td class="border px-2 py-1">${r.location}</td>
+          <td class="border px-2 py-1">${r.fixDate}</td>
+          <td class="border px-2 py-1">${r.solution}</td>
+          <td class="border px-2 py-1">${r.cost}</td>
+          <td class="border px-2 py-1 text-center">
+            <button onclick="editRepair(${r.row})" class="text-blue-600 underline">แก้ไข</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
 
-async function notify(userId, name) {
-  showLoading(true);
-  const devices = await fetch(`${API}?method=getUserBorrow&userId=${userId}`).then(r => r.json());
-  const res = await fetch(API, {
-    method: "POST",
-    body: JSON.stringify({ action: "notifyReturn", userId, name, devices })
-  });
-  showLoading(false);
-  alert(await res.text());
-}
+      showLoading(false);
+    }
 
-async function editRepair(row) {
-  showLoading(true);
-  const r = await fetch(`${API}?method=getRepairByRow&row=${row}`).then(r => r.json());
-  document.getElementById("editRow").value = row;
-  document.getElementById("editDevice").textContent = `${r.deviceName} - ${r.topic}`;
-  document.getElementById("editStatus").value = r.status;
-  document.getElementById("editLocation").value = r.location;
-  document.getElementById("editFixDate").value = toInputDate(r.fixDate);
-  document.getElementById("editSolution").value = r.solution;
-  document.getElementById("editCost").value = r.cost;
-  document.getElementById("editModal").classList.remove("hidden");
-  showLoading(false);
-}
+    function createCard(title, value, color) {
+      return `<div class="${color} text-white p-4 rounded shadow text-center">
+        <div class="text-xl font-bold">${value}</div>
+        <div class="text-sm">${title}</div>
+      </div>`;
+    }
 
-function closeModal() {
-  document.getElementById("editModal").classList.add("hidden");
-}
+    function toggleList(id) {
+      document.getElementById(id).classList.toggle("hidden");
+    }
 
-async function submitRepairUpdate() {
-  showLoading(true);
-  const payload = {
-    action: "updateRepairByRow",
-    row: parseInt(document.getElementById("editRow").value),
-    status: document.getElementById("editStatus").value,
-    location: document.getElementById("editLocation").value,
-    fixDate: document.getElementById("editFixDate").value,
-    solution: document.getElementById("editSolution").value,
-    cost: document.getElementById("editCost").value
-  };
-  const res = await fetch(API, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-  const text = await res.text();
-  showLoading(false);
-  if (text === "success") {
-    alert("✅ อัปเดตเรียบร้อย");
-    closeModal();
-    location.reload();
-  } else {
-    alert("❌ เกิดข้อผิดพลาด");
-  }
-}
+    async function notify(userId, name) {
+      showLoading(true);
+      const devices = await fetch(`${API}?method=getUserBorrow&userId=${userId}`).then(r => r.json());
+      const res = await fetch(API, {
+        method: "POST",
+        body: JSON.stringify({ action: "notifyReturn", userId, name, devices })
+      });
+      alert(await res.text());
+      showLoading(false);
+    }
 
-function toInputDate(text) {
-  if (!text || !text.includes("-")) return "";
-  const [d, m, y] = text.split("-");
-  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-}
+    async function editRepair(row) {
+      showLoading(true);
+      const r = await fetch(`${API}?method=getRepairByRow&row=${row}`).then(r => r.json());
+      document.getElementById("editRow").value = r.row;
+      document.getElementById("editDeviceId").value = r.deviceId || '';
+      document.getElementById("editStatus").value = r.status;
+      document.getElementById("editResponsible").value = r.responsible || '';
+      document.getElementById("editSendDate").value = toInputDate(r.sendDate);
+      document.getElementById("editLocation").value = r.location;
+      document.getElementById("editFixDate").value = toInputDate(r.fixDate);
+      document.getElementById("editSolution").value = r.solution;
+      document.getElementById("editCost").value = r.cost;
+      document.getElementById("editModal").classList.remove("hidden");
+      showLoading(false);
+    }
 
-window.onload = loadDashboard;
-</script>
+    async function submitRepairUpdate() {
+      showLoading(true);
+      const file = document.getElementById("editImage").files[0];
+      const imageBase64 = file ? await toBase64(file) : "";
+
+      const payload = {
+        action: "updateRepair",
+        row: parseInt(document.getElementById("editRow").value),
+        deviceId: document.getElementById("editDeviceId").value,
+        status: document.getElementById("editStatus").value,
+        responsible: document.getElementById("editResponsible").value,
+        sendDate: document.getElementById("editSendDate").value,
+        location: document.getElementById("editLocation").value,
+        fixDate: document.getElementById("editFixDate").value,
+        solution: document.getElementById("editSolution").value,
+        cost: document.getElementById("editCost").value,
+        imageBase64
+      };
+
+      const res = await fetch(API, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+      showLoading(false);
+      if (text === "success") {
+        alert("✅ อัปเดตเรียบร้อย");
+        closeModal();
+        location.reload();
+      } else {
+        alert("❌ เกิดข้อผิดพลาด: " + text);
+      }
+    }
+
+    window.onload = loadDashboard;
+  </script>
 </body>
+
 </html>
