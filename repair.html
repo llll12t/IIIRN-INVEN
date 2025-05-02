@@ -56,8 +56,15 @@
       document.getElementById("loadingOverlay").classList.add("hidden");
     }
 
-    window.onload = async () => {
-      showLoading("กำลังโหลดข้อมูลผู้ใช้ ..");
+   window.onload = async () => {
+        showLoading("กำลังโหลดข้อมูลผู้ใช้ ..");
+        await liff.init({ liffId: LIFF_ID });
+      
+        // ถ้าไม่ใช่ใน LINE Client และยังไม่ล็อกอิน ให้เรียก liff.login()
+        if (!liff.isInClient() && !liff.isLoggedIn()) {
+          liff.login(); 
+          return;  // รอให้ล็อกอินก่อน reload
+        }
       await liff.init({ liffId: LIFF_ID });
       const profile = await liff.getProfile();
       userId = profile.userId;
