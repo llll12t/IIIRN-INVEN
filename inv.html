@@ -59,22 +59,23 @@
       <button onclick="showPage('home')" class="text-slate-800 mb-2 bg-slate-200 rounded-2xl p-4">กลับ</button>
       <div class="text-md mt-2"><button onclick="startScan()" class="bg-slate-800 text-white p-4 rounded-full w-full mb-2">📷 Scan QR</button>
       </div>
-
     </div>
     <video id="video" playsinline></video>
-    <ul id="basketList" class="text-left text-sm mt-4"></ul>
-    <button onclick="submit('borrow')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ ยืนยันการยืมอุปกรณ์</button>
+    <ul id="basketList" class="text-left text-sm my-4"></ul>
+    <button onclick="submit('borrow')" class="bg-green-600 text-white px-4 py-2 rounded w-full mt-4">✅ ยืนยันการยืมอุปกรณ์</button>
   </div>
 
   <!-- หน้าคืน -->
   <div id="returnPage" class="hidden p-2 max-w-md w-full">
     <div class="flex justify-between mb-4">
-      <button onclick="showPage('home')" class="bg-slate-400 text-white px-4 py-2 rounded-full mb-2">กลับ</button>
-      <div class="text-md mt-2">คืนอุปกรณ์</div>
+      <div class="text-slate-800 text-center mb-2 w-full  p-4">คืนอุปกรณ์</div>
+      <button onclick="showPage('home')" class="text-slate-800 mb-2 bg-slate-200 rounded-2xl p-4">กลับ</button>
+      <div class="text-md mt-2">    
+        <button onclick="startScan()" class="bg-slate-800 text-white p-4 rounded-full w-full mb-2">📷 Scan QR</button>
+      </div>
     </div>
-    <button onclick="startScan()" class="bg-slate-800 text-white px-4 py-2 rounded w-full mb-2">📷 Scan QR</button>
     <video id="videoReturn" playsinline></video>
-    <ul id="basketListReturn" class="text-left text-sm mt-4"></ul>
+    <ul id="basketListReturn" class="text-left text-sm my-4"></ul>
     <button onclick="submit('return')" class="bg-green-500 text-white px-4 py-2 rounded w-full mt-4">✅ ยืนยันการคืนอุปกรณ์</button>
   </div>
 
