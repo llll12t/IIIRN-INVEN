@@ -42,7 +42,7 @@
     <div id="borrowerCards" class="grid md:grid-cols-2 gap-4 mb-6"></div>
 
     <h2 class="text-lg font-bold mb-2">🛠️ รายการแจ้งซ่อมล่าสุด</h2>
-    <div id="repairCards" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"></div>
+    <div id="repairCards" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"></div>
     
   </div>
 
@@ -106,10 +106,10 @@
       ]);
 
       document.getElementById("summaryCards").innerHTML = `
-        ${createCard("👤 ผู้ยืม", summary.usersBorrowing, 'bg-blue-500')}
-        ${createCard("📦 ยังไม่คืน", summary.totalBorrow, 'bg-yellow-500')}
-        ${createCard("🛠️ แจ้งซ่อม", summary.repairPending, 'bg-red-500')}
-        ${createCard("✅ ซ่อมเสร็จ", summary.repairDone, 'bg-green-500')}
+        ${createCard("ผู้ยืม", summary.usersBorrowing, 'bg-blue-600')}
+        ${createCard("ยังไม่คืน", summary.totalBorrow, 'bg-yellow-600')}
+        ${createCard("แจ้งซ่อม", summary.repairPending, 'bg-red-600')}
+        ${createCard("ซ่อมเสร็จ", summary.repairDone, 'bg-green-600')}
       `;
 
       const borrowerCards = document.getElementById("borrowerCards");
@@ -146,18 +146,18 @@ repairs.forEach(r => {
     </div>
     <div class="flex space-x-2">
 <div >
-    <div class="text-sm text-gray-600 mb-1">📅 วันที่แจ้ง: ${r.date}</div>
-    <div class="text-sm text-gray-600 mb-1">🔧 หัวข้อ: ${r.topic}</div>
-    <div class="text-sm text-gray-600 mb-1">📍 สถานที่: ${r.location}</div>
+    <div class="text-sm text-gray-600 mb-1">วันที่แจ้ง: ${r.date}</div>
+    <div class="text-sm text-gray-600 mb-1">หัวข้อ: ${r.topic}</div>
+    <div class="text-sm text-gray-600 mb-1">สถานที่: ${r.location}</div>
     </div>
     <div >
-    <div class="text-sm text-gray-600 mb-1">🗓️ วันที่รับคืน: ${r.fixDate}</div>
-    <div class="text-sm text-gray-600 mb-1">💡 การแก้ไข: ${r.solution}</div>
-    <div class="text-sm text-gray-600 mb-1">💰 ค่าใช้จ่าย: ${r.cost}</div>
+    <div class="text-sm text-gray-600 mb-1">วันที่รับคืน: ${r.fixDate}</div>
+    <div class="text-sm text-gray-600 mb-1">การแก้ไข: ${r.solution}</div>
+    <div class="text-sm text-gray-600 mb-1">ค่าใช้จ่าย: ${r.cost}</div>
     </div>
     </div>
     <div class="text-right mt-2">
-      <button onclick="editRepair(${r.row})" class="text-blue-600 text-sm underline">✏️ แก้ไข</button>
+      <button onclick="editRepair(${r.row})" class="bg-slate-800 px-4 py-2 rounded-md text-blue-100 text-sm underline">แก้ไข</button>
     </div>
   `;
   container.appendChild(card);
@@ -231,11 +231,11 @@ repairs.forEach(r => {
       const text = await res.text();
       showLoading(false);
       if (text === "success") {
-        alert("✅ อัปเดตเรียบร้อย");
+        alert("อัปเดตเรียบร้อย");
         closeModal();
         location.reload();
       } else {
-        alert("❌ เกิดข้อผิดพลาด: " + text);
+        alert("เกิดข้อผิดพลาด: " + text);
       }
     }
 
