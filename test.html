@@ -81,7 +81,9 @@
         <button onclick="confirmSubmit()" class="px-4 py-2 bg-[#0A1E49] text-white rounded-lg font-medium">ยืนยัน</button>
       </div>
       <div id="modalClose" class="flex justify-end hidden">
-        <button onclick="closeModal()" class="px-4 py-2 bg-[#0A1E49] text-white rounded-lg font-medium">ปิด</button>
+        <button id="btnClose" onclick="closeModal()" class="px-4 py-2 bg-[#0A1E49] text-white rounded-lg font-medium">
+          ปิด (<span id="countdown">3</span>)
+        </button>
       </div>
     </div>
   </div>
@@ -224,12 +226,31 @@
     async function confirmSubmit() {
       if (!pendingMode) return;
       await submitAction(pendingMode);
-      // แสดงข้อความสำเร็จใน modal
+
+      // เปลี่ยนเป็นข้อความสำเร็จและเริ่มนับถอย
       document.getElementById('modalTitle').textContent = 'สำเร็จแล้ว!';
-      document.getElementById('modalMessage').textContent = '✅ บันทึกสำเร็จ';
+      document.getElementById('modalMessage').textContent = '✅ บันทึกสำเร็จ ระบบจะกลับสู่หน้าหลักในอีก';
       document.getElementById('modalActions').classList.add('hidden');
       document.getElementById('modalClose').classList.remove('hidden');
+
+      startCountdown();
       pendingMode = null;
+    }
+
+    function startCountdown() {
+      let count = 3;
+      const cnt = document.getElementById('countdown');
+      cnt.textContent = count;
+      const interval = setInterval(() => {
+        count--;
+        if (count <= 0) {
+          clearInterval(interval);
+          closeModal();
+          showPage('home');
+        } else {
+          cnt.textContent = count;
+        }
+      }, 1000);
     }
 
     async function submitAction(mode) {
@@ -253,7 +274,6 @@
           lastUserId: mode==="borrow"?userIdLine:""
         });
       }
-      // ไม่เรียก alert() อีกต่อไป
     }
 
     initLIFF();
