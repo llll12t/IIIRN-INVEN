@@ -71,18 +71,19 @@
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
-authDomain: "register-58eea.firebaseapp.com",
-databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
-projectId: "register-58eea",
-storageBucket: "register-58eea.firebasestorage.app",
-messagingSenderId: "629204385342",
-appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
-measurementId: "G-FFLKXCZE64"
+    authDomain: "register-58eea.firebaseapp.com",
+    databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "register-58eea",
+    storageBucket: "register-58eea.firebasestorage.app",
+    messagingSenderId: "629204385342",
+    appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+    measurementId: "G-FFLKXCZE64"
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const LIFF_ID = "2007335399-4yV9bMq0";
+  const LIFF_ID = "2007335399-4yV9bMq0"; // ใส่ LIFF ID จริงของคุณ
+
   let userIdLine = "";
   let userName = "";
   let userPosition = "";
@@ -96,6 +97,7 @@ measurementId: "G-FFLKXCZE64"
     if (!liff.isInClient() && !liff.isLoggedIn()) {
       liff.login(); return;
     }
+
     const profile = await liff.getProfile();
     userIdLine = profile.userId;
 
@@ -131,7 +133,7 @@ measurementId: "G-FFLKXCZE64"
     snapshot.forEach(child => {
       const d = child.val();
       if (d.status === "กำลังใช้งาน" && d.lastUser.includes(userName)) {
-        tbody.innerHTML += `<tr><td>${d.id}</td><td>${d.name}</td></tr>`;
+        tbody.innerHTML += `<tr><td>${d.Id}</td><td>${d.name}</td></tr>`;
       }
     });
   }
@@ -157,24 +159,24 @@ measurementId: "G-FFLKXCZE64"
       const scanStatus = document.getElementById("scanStatus");
 
       if (code) {
-        const deviceId = code.data.trim();
-        db.ref("devices/" + deviceId).get().then(snapshot => {
+        const Id = code.data.trim();
+        db.ref("devices/" + Id).get().then(snapshot => {
           if (!snapshot.exists()) {
-            scanStatus.textContent = `❌ ไม่พบอุปกรณ์: ${deviceId}`;
+            scanStatus.textContent = `❌ ไม่พบอุปกรณ์: ${Id}`;
             scanStatus.style.color = "red";
             return;
           }
           const dev = snapshot.val();
           if (currentMode === "borrow" && dev.status === "กำลังใช้งาน") {
-            scanStatus.textContent = `⚠️ ${deviceId} (${dev.name}) ถูกยืมอยู่แล้ว`;
+            scanStatus.textContent = `⚠️ ${Id} (${dev.Name}) ถูกยืมอยู่แล้ว`;
             scanStatus.style.color = "orange";
             return;
           }
-          if (!basket.includes(deviceId)) {
-            basket.push(deviceId);
+          if (!basket.includes(Id)) {
+            basket.push(Id);
             updateList();
           }
-          scanStatus.textContent = `✅ เจออุปกรณ์: ${deviceId} (${dev.name})`;
+          scanStatus.textContent = `✅ เจออุปกรณ์: ${Id} (${dev.Name})`;
           scanStatus.style.color = "green";
         });
       }
@@ -192,16 +194,17 @@ measurementId: "G-FFLKXCZE64"
     const statusText = mode === "borrow" ? "ยืม" : "คืน";
     const now = new Date().toISOString();
 
-    for (let deviceId of basket) {
-      const snap = await db.ref("devices/" + deviceId).get();
+    for (let Id of basket) {
+      const snap = await db.ref("devices/" + Id).get();
       if (!snap.exists()) continue;
+
       const dev = snap.val();
       if (mode === "borrow" && dev.status === "กำลังใช้งาน") continue;
 
       const recId = db.ref().child(refName).push().key;
       await db.ref(`${refName}/${recId}`).set({
-        deviceId,
-        deviceName: dev.name || "ไม่ทราบชื่อ",
+        Id,
+        deviceName: dev.deviceName || "ไม่ทราบชื่อ",
         userId: userIdLine,
         userName,
         userPosition,
@@ -209,7 +212,7 @@ measurementId: "G-FFLKXCZE64"
         date: now
       });
 
-      await db.ref("devices/" + deviceId).update({
+      await db.ref("devices/" + Id).update({
         status: mode === "borrow" ? "กำลังใช้งาน" : "พร้อมใช้งาน",
         lastUser: `${userName} (${userPosition})`
       });
