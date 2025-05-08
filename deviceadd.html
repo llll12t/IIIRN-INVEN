@@ -1,162 +1,395 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Device Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      display: flex;
-      height: 100vh;
-    }
-    .sidebar {
-      background-color: #2f3542;
-      color: white;
-      width: 200px;
-      padding: 20px;
-    }
-    .sidebar h2 {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-    .sidebar a {
-      display: block;
-      color: white;
-      text-decoration: none;
-      margin: 10px 0;
-    }
-    .main {
-      flex: 1;
-      padding: 20px;
-      background-color: #f1f2f6;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: white;
-    }
-    th, td {
-      border: 1px solid #dcdde1;
-      padding: 10px;
-      text-align: left;
-    }
-    form input, form button {
-      display: block;
-      margin: 8px 0;
-      padding: 8px;
-      width: 300px;
-    }
-    img {
-      max-width: 50px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Device Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <!-- QRCode.js -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 </head>
-<body>
 
-<div class="sidebar">
-  <h2>MARLINE</h2>
-  <a href="#">Home</a>
-  <a href="#">Product</a>
-  <a href="#">Order</a>
-  <a href="#">Setting</a>
-</div>
+<body class="bg-gray-100">
 
-<div class="main">
-  <h2>เพิ่มอุปกรณ์</h2>
-  <form id="deviceForm">
-    <input type="text" id="deviceId" placeholder="รหัสอุปกรณ์" required>
-    <input type="text" id="deviceName" placeholder="ชื่ออุปกรณ์" required>
-    <input type="text" id="category" placeholder="หมวดหมู่">
-    <input type="text" id="status" placeholder="สถานะ">
-    <input type="text" id="lastUser" placeholder="ผู้ยืมคืนล่าสุด">
-    <input type="text" id="lastRepair" placeholder="ผู้แจ้งซ่อมล่าสุด">
-    <input type="file" id="image">
-    <button type="submit">บันทึก</button>
-  </form>
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 p-6">
+            <h1 class="text-white text-xl font-bold mb-6">จัดการอุปกรณ์</h1>
+            <nav class="space-y-4">
+                <a href="#" class="block bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded">หน้าหลัก</a>
+                <a href="#" class="block bg-[#09054D] text-white py-2 px-4 rounded">อุปกรณ์</a>
+                <a href="#" class="block bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded">สมาชิก</a>
+            </nav>
+        </aside>
 
-  <h2>รายการอุปกรณ์</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>รหัส</th>
-        <th>ชื่อ</th>
-        <th>หมวดหมู่</th>
-        <th>สถานะ</th>
-        <th>QR</th>
-        <th>รูป</th>
-      </tr>
-    </thead>
-    <tbody id="deviceList"></tbody>
-  </table>
-</div>
+        <!-- Main -->
+        <main class="flex-1 p-6">
+            <!-- Header + Summary -->
+            <div
+                class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+                <button id="openModal"
+                    class="bg-[#09054D] hover:bg-[#06043a] text-white px-6 py-3 rounded-lg text-lg font-semibold">
+                    เพิ่มอุปกรณ์
+                </button>
+                <div id="summaryBoxes" class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full md:w-auto"></div>
+            </div>
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
-authDomain: "register-58eea.firebaseapp.com",
-databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
-projectId: "register-58eea",
-storageBucket: "register-58eea.firebasestorage.app",
-messagingSenderId: "629204385342",
-appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
-measurementId: "G-FFLKXCZE64"  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const storage = firebase.storage();
+            <!-- Table Container -->
+            <div class="border-2 border-blue-500 rounded-lg overflow-hidden bg-white">
+                <!-- Filters -->
+                <div class="flex flex-wrap items-center px-6 py-4 space-x-6 border-b">
+                    <div class="flex items-center space-x-2">
+                        <label for="filterId" class="text-sm">รหัส</label>
+                        <input id="filterId" type="text" class="w-32 h-8 border border-gray-300 rounded px-2 text-sm"
+                            placeholder="">
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <label for="filterName" class="text-sm">ชื่อ</label>
+                        <input id="filterName" type="text" class="w-32 h-8 border border-gray-300 rounded px-2 text-sm"
+                            placeholder="">
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <label for="filterStatus" class="text-sm">สถานะ</label>
+                        <input id="filterStatus" type="text"
+                            class="w-32 h-8 border border-gray-300 rounded px-2 text-sm" placeholder="">
+                    </div>
+                </div>
 
-  const form = document.getElementById("deviceForm");
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const deviceId = document.getElementById("deviceId").value;
-const deviceName = document.getElementById("deviceName").value;
-const category = document.getElementById("category").value;
-const status = document.getElementById("status").value;
-const lastUser = document.getElementById("lastUser").value;
-const lastRepair = document.getElementById("lastRepair").value;
-const imageFile = document.getElementById("image").files[0];
+                <!-- Table -->
+                <table class="min-w-full table-fixed">
+                    <thead class="bg-black text-white">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm">รหัส</th>
+                            <th class="py-3 px-4 text-left text-sm">ชื่อ</th>
+                            <th class="py-3 px-4 text-left text-sm">หมวดหมู่</th>
+                            <th class="py-3 px-4 text-left text-sm">QR</th>
+                            <th class="py-3 px-4 text-left text-sm">สถานะ</th>
+                            <th class="py-3 px-4 text-left text-sm">รูป</th>
+                            <th class="py-3 px-4 text-left text-sm">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceList" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+                </table>
 
-    let imageUrl = "";
+                <!-- Footer: Rows & Pagination -->
+                <div class="flex justify-between items-center px-6 py-4 bg-gray-50">
+                    <div class="flex items-center space-x-2">
+                        <label for="rowsPerPage" class="text-sm">แสดง</label>
+                        <select id="rowsPerPage" class="w-12 h-8 border border-gray-300 rounded text-sm">
+                            <option value="15">15</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="text-sm">แถวต่อหน้า</span>
+                    </div>
+                    <div id="pagination" class="flex space-x-2"></div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-    if (imageFile) {
-      const storageRef = storage.ref("device_images/" + deviceId);
-      await storageRef.put(imageFile);
-      imageUrl = await storageRef.getDownloadURL();
-    }
+    <!-- Add/Edit Modal -->
+    <div id="deviceModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg w-11/12 md:w-1/2 p-6 relative">
+            <button id="closeModal" class="absolute top-3 right-3 text-gray-500 text-2xl">&times;</button>
+            <h2 id="modalTitle" class="text-xl font-semibold mb-4">เพิ่มอุปกรณ์</h2>
+            <form id="deviceForm" class="space-y-4">
+                <input type="hidden" id="editDeviceId">
+                <div>
+                    <label class="block text-sm mb-1">รหัสอุปกรณ์</label>
+                    <input id="deviceId" type="text" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">ชื่ออุปกรณ์</label>
+                    <input id="deviceName" type="text" class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        required>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">หมวดหมู่</label>
+                    <input id="category" type="text" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">สถานะ</label>
+                    <select id="status" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                        <option value="พร้อมใช้งาน">พร้อมใช้งาน</option>
+                        <option value="กำลังใช้งาน">กำลังใช้งาน</option>
+                        <option value="ส่งซ่อม">ส่งซ่อม</option>
+                        <option value="เสียหาย">เสียหาย</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">รูปอุปกรณ์</label>
+                    <input id="image" type="file" accept="image/*">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" id="cancelBtn"
+                        class="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100">ยกเลิก</button>
+                    <button type="submit" id="saveBtn"
+                        class="px-4 py-2 bg-[#09054D] text-white rounded hover:bg-[#06043a] flex items-center">
+                        บันทึก
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    await db.ref("devices/" + deviceId).set({
-      deviceId, deviceName, category, status, lastUser, lastRepair, imageUrl
-    });
+    <!-- Image Preview Modal -->
+    <div id="imgModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-40">
+        <div class="relative">
+            <button id="closeImgModal" class="absolute top-2 right-2 text-white text-3xl">&times;</button>
+            <img id="imgModalContent" class="max-h-screen max-w-screen-lg rounded-lg shadow-lg">
+        </div>
+    </div>
 
-    alert("บันทึกข้อมูลเรียบร้อย");
-    form.reset();
-  });
+    <script>
+        // Firebase init
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
+            authDomain: "register-58eea.firebaseapp.com",
+            databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "register-58eea",
+            storageBucket: "register-58eea.firebasestorage.app",
+            messagingSenderId: "629204385342",
+            appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+            measurementId: "G-FFLKXCZE64"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const storage = firebase.storage();
 
-  db.ref("devices").on("value", snapshot => {
-    const tbody = document.getElementById("deviceList");
-    tbody.innerHTML = "";
-    snapshot.forEach(child => {
-      const data = child.val();
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${data.deviceId}</td>
-        <td>${data.deviceName}</td>
-        <td>${data.category}</td>
-        <td>${data.status}</td>
-        <td><canvas id="qr-${data.deviceId}"></canvas></td>
-        <td><img src="${data.imageUrl || 'https://via.placeholder.com/50'}"/></td>
+        // State
+        let devicesData = [];
+        let currentPage = 1;
+        let rowsPerPage = 15;
+
+        // Elements
+        const summaryBoxes = document.getElementById('summaryBoxes');
+        const deviceListEl = document.getElementById('deviceList');
+        const paginationEl = document.getElementById('pagination');
+        const rowsPerPageSelect = document.getElementById('rowsPerPage');
+        const filters = {
+            id: document.getElementById('filterId'),
+            name: document.getElementById('filterName'),
+            status: document.getElementById('filterStatus'),
+        };
+        const saveBtn = document.getElementById('saveBtn');
+
+        // Helpers
+        function statusClass(s) {
+            if (s === 'พร้อมใช้งาน') return 'bg-green-200 text-green-800';
+            if (s === 'กำลังใช้งาน') return 'bg-blue-200 text-blue-800';
+            if (s === 'ส่งซ่อม') return 'bg-yellow-200 text-yellow-800';
+            if (s === 'เสียหาย') return 'bg-red-200 text-red-800';
+            return 'bg-gray-200 text-gray-800';
+        }
+        function applyFilters(data) {
+            return data.filter(d => {
+                if (filters.id.value && !d.deviceId.includes(filters.id.value)) return false;
+                if (filters.name.value && !d.deviceName.includes(filters.name.value)) return false;
+                if (filters.status.value && !d.status.includes(filters.status.value)) return false;
+                return true;
+            });
+        }
+
+        // Render summary and table
+        function updateSummary() {
+            const counts = { ready: 0, inUse: 0, repair: 0, lost: 0 };
+            devicesData.forEach(d => {
+                if (d.status === 'พร้อมใช้งาน') counts.ready++;
+                else if (d.status === 'กำลังใช้งาน') counts.inUse++;
+                else if (d.status === 'ส่งซ่อม') counts.repair++;
+                else if (d.status === 'เสียหาย') counts.lost++;
+            });
+            summaryBoxes.innerHTML = `
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${counts.ready}</div>
+          <div class="text-sm">พร้อมใช้งาน</div>
+        </div>
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${counts.inUse}</div>
+          <div class="text-sm">กำลังใช้งาน</div>
+        </div>
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${counts.repair}</div>
+          <div class="text-sm">ส่งซ่อม</div>
+        </div>
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${counts.lost}</div>
+          <div class="text-sm">เสียหาย</div>
+        </div>
       `;
-      tbody.appendChild(tr);
-      QRCode.toCanvas(document.getElementById("qr-" + data.deviceId), data.deviceId);
-    });
-  });
-</script>
+        }
+        function renderTable() {
+            const filtered = applyFilters(devicesData);
+            const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = 1;
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const pageData = filtered.slice(start, start + rowsPerPage);
+
+            deviceListEl.innerHTML = '';
+            pageData.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+          <td class="py-3 px-4">${d.deviceId}</td>
+          <td class="py-3 px-4">${d.deviceName}</td>
+          <td class="py-3 px-4">${d.category || '-'}</td>
+          <td class="py-3 px-4"><canvas id="qr-${d.deviceId}"></canvas></td>
+          <td class="py-3 px-4"><span class="px-3 py-1 rounded-full ${statusClass(d.status)}">${d.status}</span></td>
+          <td class="py-3 px-4"><img src="${d.imageUrl || 'https://via.placeholder.com/50'}" class="w-10 h-10 object-cover rounded cursor-pointer"/></td>
+          <td class="py-3 px-4 space-x-2">
+            <button onclick="openEditModal('${d.deviceId}')" class="px-3 py-1 bg-[#09054D] text-white rounded">แก้ไข</button>
+            <button onclick="deleteDevice('${d.deviceId}')" class="px-3 py-1 bg-red-400 text-white rounded">ลบ</button>
+          </td>
+        `;
+                deviceListEl.appendChild(tr);
+                QRCode.toCanvas(document.getElementById(`qr-${d.deviceId}`), d.deviceId);
+            });
+
+            // Attach image preview listeners
+            document.querySelectorAll('#deviceList img').forEach(img => {
+                img.onclick = () => {
+                    document.getElementById('imgModalContent').src = img.src;
+                    document.getElementById('imgModal').classList.remove('hidden');
+                };
+            });
+
+            // Pagination
+            paginationEl.innerHTML = '';
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                btn.className = `px-3 py-1 rounded ${i === currentPage ? 'bg-black text-white' : 'bg-gray-300'}`;
+                btn.onclick = () => { currentPage = i; renderTable(); };
+                paginationEl.appendChild(btn);
+            }
+
+            updateSummary();
+        }
+
+        // Fetch from Firebase
+        // Fetch จาก Firebase แล้ว flatten ถ้ามี nested object อีกชั้น
+        db.ref('devices').on('value', snapshot => {
+            devicesData = [];
+            snapshot.forEach(child => {
+                const data = child.val();
+                if (data.deviceId) {
+                    // ถ้าเป็น record ปกติ (มี deviceId) ก็ push เลย
+                    devicesData.push(data);
+                } else {
+                    // ถ้าเจอ object ที่ไม่มี deviceId แสดงว่าข้างในน่าจะเป็น map อีกที
+                    // ให้ดึงแต่ละค่า (sub-record) มารวม
+                    Object.values(data).forEach(sub => devicesData.push(sub));
+                }
+            });
+            renderTable();
+        });
+
+
+        // Event listeners
+        rowsPerPageSelect.addEventListener('change', e => {
+            rowsPerPage = +e.target.value;
+            currentPage = 1;
+            renderTable();
+        });
+        Object.values(filters).forEach(inp =>
+            inp.addEventListener('input', () => {
+                currentPage = 1;
+                renderTable();
+            })
+        );
+
+        // Modal controls
+        const openModalBtn = document.getElementById('openModal');
+        const deviceModal = document.getElementById('deviceModal');
+        const closeModalBtn = document.getElementById('closeModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const modalTitle = document.getElementById('modalTitle');
+        const deviceForm = document.getElementById('deviceForm');
+        const editDeviceIdInput = document.getElementById('editDeviceId');
+
+        openModalBtn.onclick = () => {
+            modalTitle.textContent = 'เพิ่มอุปกรณ์';
+            deviceForm.reset();
+            editDeviceIdInput.value = '';
+            document.getElementById('deviceId').disabled = false;
+            deviceModal.classList.remove('hidden');
+        };
+        closeModalBtn.onclick = cancelBtn.onclick = () => deviceModal.classList.add('hidden');
+
+        // Submit form with conditional imageUrl update
+        deviceForm.onsubmit = async e => {
+            e.preventDefault();
+            const origHTML = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<span class="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4 inline-block mr-2"></span>กำลังบันทึก';
+            saveBtn.disabled = true;
+
+            const id = document.getElementById('deviceId').value.trim();
+            const name = document.getElementById('deviceName').value.trim();
+            const category = document.getElementById('category').value.trim();
+            const status = document.getElementById('status').value;
+            const file = document.getElementById('image').files[0];
+
+            let updateData = {
+                deviceName: name,
+                category,
+                status
+            };
+
+            if (file) {
+                const ref = storage.ref('device_images/' + id);
+                await ref.put(file);
+                const imageUrl = await ref.getDownloadURL();
+                updateData.imageUrl = imageUrl;
+            }
+
+            if (editDeviceIdInput.value) {
+                await db.ref('devices/' + id).update(updateData);
+            } else {
+                await db.ref('devices/' + id).set({
+                    deviceId: id,
+                    ...updateData,
+                    imageUrl: updateData.imageUrl || ''
+                });
+            }
+
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = origHTML;
+            deviceModal.classList.add('hidden');
+        };
+
+        // Edit / Delete functions
+        function openEditModal(id) {
+            const d = devicesData.find(x => x.deviceId === id);
+            if (!d) return;
+            modalTitle.textContent = 'แก้ไขอุปกรณ์';
+            editDeviceIdInput.value = id;
+            document.getElementById('deviceId').value = d.deviceId;
+            document.getElementById('deviceId').disabled = true;
+            document.getElementById('deviceName').value = d.deviceName;
+            document.getElementById('category').value = d.category || '';
+            document.getElementById('status').value = d.status;
+            deviceModal.classList.remove('hidden');
+        }
+        function deleteDevice(id) {
+            if (confirm('ต้องการลบอุปกรณ์ ' + id + ' หรือไม่?')) {
+                db.ref('devices/' + id).remove();
+            }
+        }
+
+        // Image modal
+        const imgModal = document.getElementById('imgModal');
+        const closeImgModal = document.getElementById('closeImgModal');
+        closeImgModal.onclick = () => imgModal.classList.add('hidden');
+        window.onclick = e => { if (e.target === imgModal) imgModal.classList.add('hidden'); };
+    </script>
 
 </body>
+
 </html>
