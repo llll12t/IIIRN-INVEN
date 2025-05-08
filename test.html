@@ -159,21 +159,34 @@
       if (page === "home") loadBorrowed();
     }
 
-    async function loadBorrowed() {
-      const tbody = document.getElementById("borrowedList");
-      tbody.innerHTML = "";
-      const snap = await db.ref("devices").once("value");
-      snap.forEach(child => {
-        const d = child.val();
-        if (d.status === "กำลังใช้งาน" && d.lastUser.includes(userName)) {
-          tbody.innerHTML += `
-            <tr>
-              <td class="py-2 px-4 border">${d.deviceId}</td>
-              <td class="py-2 px-4 border">${d.deviceName}</td>
-            </tr>`;
-        }
-      });
+async function loadBorrowed() {
+  const tbody = document.getElementById("borrowedList");
+  tbody.innerHTML = "";
+  let hasData = false;
+
+  const snap = await db.ref("devices").once("value");
+  snap.forEach(child => {
+    const d = child.val();
+    if (d.status === "กำลังใช้งาน" && d.lastUser.includes(userName)) {
+      hasData = true;
+      tbody.innerHTML += `
+        <tr>
+          <td class="py-2 px-4 border">${d.deviceId}</td>
+          <td class="py-2 px-4 border">${d.deviceName}</td>
+        </tr>`;
     }
+  });
+
+  // ถ้าไม่เจอข้อมูล ให้แสดงข้อความ
+  if (!hasData) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="2" class="py-4 text-center text-gray-500">
+          ไม่มีอุปกรณ์ที่ยืมอยู่
+        </td>
+      </tr>`;
+  }
+}
 
     async function startScan(mode) {
       currentMode = mode;
