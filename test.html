@@ -15,9 +15,11 @@
 <body class="bg-gray-100 font-sans">
 
   <!-- หน้าแรก -->
-  <div id="homePage" class="max-w-md mx-auto p-4 rounded-2xl mx-2 mt-4">
+  <div id="homePage" class="max-w-md mx-auto p-4 rounded-2xl mx-2 mt-2">
+    <div class="p-4 bg-white  rounded-2xl mb-4">
     <p id="empName" class="font-semibold mb-1">กำลังโหลดชื่อพนักงาน...</p>
     <p id="empPosition" class="text-gray-600 mb-4">&nbsp;</p>
+  </div>
     <div class="flex space-x-2 mb-4">
       <button onclick="showPage('borrow')" class="flex-1 bg-[#0A1E49] text-white py-3 rounded-full font-bold">↑ ยืม</button>
       <button onclick="showPage('return')" class="flex-1 bg-[#FF9966] text-white py-3 rounded-full font-bold">↓ คืน</button>
@@ -35,7 +37,7 @@
 
   <!-- หน้ายืม -->
   <div id="borrowPage" class="max-w-md mx-auto p-4  rounded-2xl mx-2 mt-2 hidden">
-    <h2 class="text-md font-semibold mb-4">ยืมอุปกรณ์</h2>
+    <h2 class="p-4 text-center bg-white rounded-2xl mb-4">ยืมอุปกรณ์</h2>
     <div class="flex space-x-2 mb-4">
       <button onclick="startScan('borrow')" class="flex-1 bg-[#0A1E49] text-white py-3 rounded-full font-bold flex items-center justify-center gap-2">
           Scan QR
@@ -58,10 +60,10 @@
   </div>
 
   <!-- คืนอุปกรณ์ -->
-  <div id="returnPage" class="max-w-md mx-auto p-6 bg-gray-200 rounded-2xl mt-6 hidden">
-    <h2 class="text-md text-center w-full bg-[#FF9966] p-3 font-semibold rounded-2xl mb-4">คืนอุปกรณ์</h2>
+  <div id="returnPage" class="max-w-md mx-auto p-4  rounded-2xl mx-2 mt-2 hidden">
+    <h2 class="p-4 text-center bg-white rounded-2xl mb-4">คืนอุปกรณ์</h2>
     <div class="flex space-x-2 mb-4">
-      <button onclick="startScan('return')" class="flex-1 bg-[#0A1E49] py-3 rounded-full font-bold flex items-center justify-center gap-2">
+      <button onclick="startScan('return')" class="flex-1 bg-[#0A1E49] text-white  py-3 rounded-full font-bold flex items-center justify-center gap-2">
          Scan QR
       </button>
       <button onclick="showPage('home')" class="flex-1 bg-white border border-gray-300 py-3 rounded-full font-bold">
@@ -121,7 +123,7 @@
     let basket = [], currentMode = "", pendingMode = null;
 
     async function initLIFF() {
-      await liff.init({ liffId: LIFF_ID });
+     // await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) liff.login();
       const profile = await liff.getProfile();
       userIdLine = profile.userId;
