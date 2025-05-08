@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Device Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+    .sidebar {
+      background-color: #2f3542;
+      color: white;
+      width: 200px;
+      padding: 20px;
+    }
+    .sidebar h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .sidebar a {
+      display: block;
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+    }
+    .main {
+      flex: 1;
+      padding: 20px;
+      background-color: #f1f2f6;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #dcdde1;
+      padding: 10px;
+      text-align: left;
+    }
+    form input, form button {
+      display: block;
+      margin: 8px 0;
+      padding: 8px;
+      width: 300px;
+    }
+    img {
+      max-width: 50px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>MARLINE</h2>
+  <a href="#">Home</a>
+  <a href="#">Product</a>
+  <a href="#">Order</a>
+  <a href="#">Setting</a>
+</div>
+
+<div class="main">
+  <h2>เพิ่มอุปกรณ์</h2>
+  <form id="deviceForm">
+    <input type="text" id="deviceId" placeholder="รหัสอุปกรณ์" required>
+    <input type="text" id="deviceName" placeholder="ชื่ออุปกรณ์" required>
+    <input type="text" id="category" placeholder="หมวดหมู่">
+    <input type="text" id="status" placeholder="สถานะ">
+    <input type="text" id="lastUser" placeholder="ผู้ยืมคืนล่าสุด">
+    <input type="text" id="lastRepair" placeholder="ผู้แจ้งซ่อมล่าสุด">
+    <input type="file" id="image">
+    <button type="submit">บันทึก</button>
+  </form>
+
+  <h2>รายการอุปกรณ์</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>รหัส</th>
+        <th>ชื่อ</th>
+        <th>หมวดหมู่</th>
+        <th>สถานะ</th>
+        <th>QR</th>
+        <th>รูป</th>
+      </tr>
+    </thead>
+    <tbody id="deviceList"></tbody>
+  </table>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
+authDomain: "register-58eea.firebaseapp.com",
+databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId: "register-58eea",
+storageBucket: "register-58eea.firebasestorage.app",
+messagingSenderId: "629204385342",
+appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+measurementId: "G-FFLKXCZE64"  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const storage = firebase.storage();
+
+  const form = document.getElementById("deviceForm");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const deviceId = document.getElementById("deviceId").value;
+const deviceName = document.getElementById("deviceName").value;
+const category = document.getElementById("category").value;
+const status = document.getElementById("status").value;
+const lastUser = document.getElementById("lastUser").value;
+const lastRepair = document.getElementById("lastRepair").value;
+const imageFile = document.getElementById("image").files[0];
+
+    let imageUrl = "";
+
+    if (imageFile) {
+      const storageRef = storage.ref("device_images/" + deviceId);
+      await storageRef.put(imageFile);
+      imageUrl = await storageRef.getDownloadURL();
+    }
+
+    await db.ref("devices/" + deviceId).set({
+      deviceId, deviceName, category, status, lastUser, lastRepair, imageUrl
+    });
+
+    alert("บันทึกข้อมูลเรียบร้อย");
+    form.reset();
+  });
+
+  db.ref("devices").on("value", snapshot => {
+    const tbody = document.getElementById("deviceList");
+    tbody.innerHTML = "";
+    snapshot.forEach(child => {
+      const data = child.val();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${data.deviceId}</td>
+        <td>${data.deviceName}</td>
+        <td>${data.category}</td>
+        <td>${data.status}</td>
+        <td><canvas id="qr-${data.deviceId}"></canvas></td>
+        <td><img src="${data.imageUrl || 'https://via.placeholder.com/50'}"/></td>
+      `;
+      tbody.appendChild(tr);
+      QRCode.toCanvas(document.getElementById("qr-" + data.deviceId), data.deviceId);
+    });
+  });
+</script>
+
+</body>
+</html>
