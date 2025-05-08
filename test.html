@@ -23,7 +23,7 @@
       <button onclick="showPage('borrow')" class="flex-1 bg-[#0A1E49] text-white py-3 rounded-full font-bold">↑ ยืม</button>
       <button onclick="showPage('return')" class="flex-1 bg-[#FF9966] text-white py-3 rounded-full font-bold">↓ คืน</button>
     </div>
-    <table class="w-full border-collapse min-h-40 bg-white rounded-b-2xl">
+    <table class="w-full border-collapse bg-white rounded-b-2xl">
       <thead>
         <tr>
           <th class="py-2 px-4 bg-[#1c2950] w-40 rounded-tl-2xl text-white">รหัสอุปกรณ์</th>
@@ -45,7 +45,7 @@
         ← กลับ
       </button>
     </div>
-    <video id="video" playsinline class="w-full rounded-lg mb-4 min-h-40 hidden"></video>
+    <video id="video" playsinline class="w-full rounded-lg mb-4 max-h-40 hidden"></video>
     <ul id="basketBorrow" class="mb-4 space-y-2"></ul>
     <p id="scanStatusBorrow" class="font-semibold mb-4"></p>
     <!-- ปุ่มยืนยันยืม (disabled ถ้าไม่มีรายการ) -->
