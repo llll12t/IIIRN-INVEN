@@ -212,10 +212,12 @@ measurementId: "G-FFLKXCZE64"  };
         date: now
       });
 
-      await db.ref("devices/" + deviceId).update({
-        status: mode === "borrow" ? "กำลังใช้งาน" : "พร้อมใช้งาน",
-        lastUser: `${userName} (${userPosition})`
-      });
+     await db.ref("devices/" + deviceId).update({
+      status: mode === "borrow" ? "กำลังใช้งาน" : "พร้อมใช้งาน",
+      lastUser: `${userName} (${userPosition})`,
+      lastUserId: mode === "borrow" ? userIdLine : ""  // ลบ user ออกเมื่อลงคืน
+    });
+
     }
 
     alert("✅ บันทึกสำเร็จ");
