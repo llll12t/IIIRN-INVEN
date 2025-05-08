@@ -2,23 +2,19 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ระบบยืมคืน</title>
+  <title>ระบบยืม-คืนอุปกรณ์</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 0; background: #efefef; }
+    body { font-family: sans-serif; background: #efefef; }
     .page { max-width: 400px; margin: auto; padding: 20px; background: #f4f4f4; border-radius: 16px; }
     .hidden { display: none; }
     h2 { margin-top: 0; }
     button {
-      border: none;
-      border-radius: 14px;
-      padding: 12px 16px;
-      font-weight: bold;
-      margin: 5px 4px;
-      width: 45%;
+      border: none; border-radius: 14px; padding: 12px 16px;
+      font-weight: bold; margin: 5px 4px; width: 45%;
     }
     .btn-scan { background: #0A1E49; color: white; }
     .btn-back { background: white; border: 1px solid #ccc; }
@@ -29,11 +25,11 @@
     th { background: #1c2950; color: white; }
     td { background: white; }
     video { display: none; width: 100%; border-radius: 10px; margin-top: 10px; }
+    #scanStatus { margin-top: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-<!-- หน้า Home -->
 <div class="page" id="homePage">
   <h2>รายการ ยืม คืนอุปกรณ์</h2>
   <p>ชื่อ สกุล<br>ตำแหน่ง: demo</p>
@@ -42,41 +38,36 @@
     <button class="btn-return" onclick="showPage('return')">↓ คืน</button>
   </div>
   <table>
-    <thead>
-      <tr><th>รหัสอุปกรณ์</th><th>ชื่ออุปกรณ์</th></tr>
-    </thead>
+    <thead><tr><th>รหัสอุปกรณ์</th><th>ชื่ออุปกรณ์</th></tr></thead>
     <tbody id="borrowedList"></tbody>
   </table>
 </div>
 
-<!-- หน้ายืม -->
 <div class="page hidden" id="borrowPage">
   <h2>ยืมอุปกรณ์</h2>
-  <p>ชื่อ สกุล<br>ตำแหน่ง: demo</p>
   <div style="display: flex; justify-content: space-between;">
     <button class="btn-scan" onclick="startScan('borrow')">📷 Scan QR</button>
     <button class="btn-back" onclick="showPage('home')">← กลับ</button>
   </div>
   <video id="video" playsinline></video>
   <ul id="basketBorrow"></ul>
+  <p id="scanStatus"></p>
   <button class="btn-borrow" onclick="submitAction('borrow')">✅ ยืนยันยืม</button>
 </div>
 
-<!-- หน้าคืน -->
 <div class="page hidden" id="returnPage">
   <h2>คืนอุปกรณ์</h2>
-  <p>ชื่อ สกุล<br>ตำแหน่ง: demo</p>
   <div style="display: flex; justify-content: space-between;">
     <button class="btn-scan" onclick="startScan('return')">📷 Scan QR</button>
     <button class="btn-back" onclick="showPage('home')">← กลับ</button>
   </div>
   <video id="videoReturn" playsinline></video>
   <ul id="basketReturn"></ul>
+  <p id="scanStatus"></p>
   <button class="btn-return" onclick="submitAction('return')">✅ ยืนยันคืน</button>
 </div>
 
 <script>
-  // Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
 authDomain: "register-58eea.firebaseapp.com",
@@ -92,16 +83,19 @@ measurementId: "G-FFLKXCZE64"
 
   const userId = "U001";
   const userName = "คุณสกุล";
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
   let basket = [];
   let currentMode = "";
 
   function showPage(page) {
-    document.getElementById("homePage").classList.add("hidden");
-    document.getElementById("borrowPage").classList.add("hidden");
-    document.getElementById("returnPage").classList.add("hidden");
+    ["homePage", "borrowPage", "returnPage"].forEach(id =>
+      document.getElementById(id).classList.add("hidden")
+    );
     document.getElementById(`${page}Page`).classList.remove("hidden");
     basket = [];
     updateList();
+    document.getElementById("scanStatus").textContent = "";
     if (page === "home") loadBorrowed();
   }
 
@@ -122,27 +116,45 @@ measurementId: "G-FFLKXCZE64"
     const video = document.getElementById(mode === "borrow" ? "video" : "videoReturn");
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     video.srcObject = stream;
-    video.style.display = "block";
+    video.setAttribute("playsinline", true);
     video.play();
-    requestAnimationFrame(() => scanLoop(video));
+    video.style.display = "block";
+    requestAnimationFrame(() => tick(video));
   }
 
-  function scanLoop(video) {
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, canvas.width, canvas.height);
-    if (code) {
-      const id = code.data.trim();
-      if (!basket.includes(id)) {
-        basket.push(id);
-        updateList();
+  function tick(video) {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      const scanStatus = document.getElementById("scanStatus");
+
+      if (code) {
+        const deviceId = code.data.trim();
+        db.ref("devices/" + deviceId).get().then(snapshot => {
+          if (!snapshot.exists()) {
+            scanStatus.textContent = `❌ ไม่พบอุปกรณ์: ${deviceId}`;
+            scanStatus.style.color = "red";
+            return;
+          }
+          const dev = snapshot.val();
+          if (currentMode === "borrow" && dev.status === "กำลังใช้งาน") {
+            scanStatus.textContent = `⚠️ ${deviceId} (${dev.deviceName}) ถูกยืมอยู่แล้ว`;
+            scanStatus.style.color = "orange";
+            return;
+          }
+          if (!basket.includes(deviceId)) {
+            basket.push(deviceId);
+            updateList();
+          }
+          scanStatus.textContent = `✅ เจออุปกรณ์: ${deviceId} (${dev.deviceName})`;
+          scanStatus.style.color = "green";
+        });
       }
     }
-    if (video.srcObject) requestAnimationFrame(() => scanLoop(video));
+    if (video.srcObject) requestAnimationFrame(() => tick(video));
   }
 
   function updateList() {
@@ -157,17 +169,10 @@ measurementId: "G-FFLKXCZE64"
 
     for (let deviceId of basket) {
       const snap = await db.ref("devices/" + deviceId).get();
-      if (!snap.exists()) {
-        alert(`ไม่พบอุปกรณ์: ${deviceId}`);
-        continue;
-      }
+      if (!snap.exists()) continue;
 
       const dev = snap.val();
-
-      if (mode === "borrow" && dev.status === "กำลังใช้งาน") {
-        alert(`อุปกรณ์ ${deviceId} ถูกยืมอยู่`);
-        continue;
-      }
+      if (mode === "borrow" && dev.status === "กำลังใช้งาน") continue;
 
       const recId = db.ref().child(refName).push().key;
       await db.ref(`${refName}/${recId}`).set({
@@ -185,13 +190,11 @@ measurementId: "G-FFLKXCZE64"
       });
     }
 
-    alert("บันทึกสำเร็จ");
+    alert("✅ บันทึกสำเร็จ");
     showPage("home");
   }
 
-  // โหลดข้อมูลตอนเริ่ม
   loadBorrowed();
 </script>
-
 </body>
 </html>
