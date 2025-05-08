@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard อุปกรณ์</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    h2 { margin-top: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #eaeaea; }
+    button {
+      background: #0A1E49; color: white; padding: 6px 12px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    img { border-radius: 4px; max-width: 80px; }
+  </style>
+</head>
+<body>
+
+  <h1>📊 Dashboard ระบบอุปกรณ์</h1>
+  <div id="borrowedDevicesContainer"></div>
+
+  <h2>🛠 รายการแจ้งซ่อม</h2>
+  <table>
+    <thead>
+      <tr><th>วันที่</th><th>อุปกรณ์</th><th>อาการ</th><th>ผู้แจ้ง</th><th>สถานะ</th><th>รูป</th></tr>
+    </thead>
+    <tbody id="repairList"></tbody>
+  </table>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
+authDomain: "register-58eea.firebaseapp.com",
+databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId: "register-58eea",
+storageBucket: "register-58eea.firebasestorage.app",
+messagingSenderId: "629204385342",
+appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+measurementId: "G-FFLKXCZE64"  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const appsScriptUrl = "https://script.google.com/macros/s/AKfycbxgGncjm0mJlbxYgQh5z4kvfbfefUniF_VKA_gcItazeNS0B5H56CyI5UiBDJCvAnFk_w/exec";
+
+  // ฟังก์ชันส่งข้อความ LINE
+  function sendLineMessage(userIdLine, userName, deviceList) {
+    const message = `📦 คุณ ${userName} กรุณาคืนอุปกรณ์ดังนี้:\n` +
+      deviceList.map(d => `- ${d.id} : ${d.name}`).join("\n");
+
+    fetch(appsScriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      mode: "no-cors",
+      body: JSON.stringify({ userId: userIdLine, message })
+    })
+    .then(res => res.text())
+    .then(txt => alert("✅ ส่งข้อความ: " + txt))
+    .catch(err => alert("❌ ERROR: " + err));
+  }
+
+  // ดึงรายการอุปกรณ์ที่ยังไม่ได้คืน
+  db.ref("devices").once("value").then(snapshot => {
+    const devices = snapshot.val();
+    const usersMap = {};
+    for (let id in devices) {
+      const d = devices[id];
+      if (d.status === "กำลังใช้งาน") {
+        const key = d.lastUserId || "unknown";
+        if (!usersMap[key]) usersMap[key] = { name: d.lastUser || "-", devices: [] };
+        usersMap[key].devices.push({ id: d.deviceId, name: d.deviceName });
+      }
+    }
+
+    const container = document.getElementById("borrowedDevicesContainer");
+    for (let userIdLine in usersMap) {
+      const u = usersMap[userIdLine];
+      const section = document.createElement("div");
+      section.innerHTML = `
+        <h2>👤 ${u.name}</h2>
+        <table>
+          <thead><tr><th>รหัส</th><th>ชื่อ</th></tr></thead>
+          <tbody>${u.devices.map(d => `<tr><td>${d.id}</td><td>${d.name}</td></tr>`).join("")}</tbody>
+        </table>
+        <button data-userid="${userIdLine}" data-username="${u.name}" data-devices='${JSON.stringify(u.devices)}'
+          onclick="handleSend(this)">📨 แจ้งเตือน LINE</button>
+        <hr/>
+      `;
+      container.appendChild(section);
+    }
+  });
+
+  function handleSend(btn) {
+    const userId = btn.getAttribute("data-userid");
+    const userName = btn.getAttribute("data-username");
+    const deviceList = JSON.parse(btn.getAttribute("data-devices"));
+    sendLineMessage(userId, userName, deviceList);
+  }
+
+  // รายการแจ้งซ่อม
+  db.ref("repairReports").once("value").then(snapshot => {
+    const repairList = document.getElementById("repairList");
+    snapshot.forEach(child => {
+      const r = child.val();
+      const date = new Date(r.date).toLocaleString("th-TH");
+      repairList.innerHTML += `
+        <tr>
+          <td>${date}</td>
+          <td>${r.deviceName || r.deviceId}</td>
+          <td>${r.title} - ${r.details}</td>
+          <td>${r.reporterName}</td>
+          <td>${r.status}</td>
+          <td><img src="${r.imageUrl}" width="60"/></td>
+        </tr>
+      `;
+    });
+  });
+</script>
+
+</body>
+</html>
