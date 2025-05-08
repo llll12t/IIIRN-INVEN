@@ -110,20 +110,27 @@
     // สถานะทั่วไป
     let basket = [], currentMode = "", pendingMode = null;
 
-    async function initLIFF() {
+async function initLIFF() {
       await liff.init({ liffId: LIFF_ID });
       if (!liff.isLoggedIn()) liff.login();
       const profile = await liff.getProfile();
       userIdLine = profile.userId;
+
       const empSnap = await db.ref("employees")
         .orderByChild("userIdLine").equalTo(userIdLine).get();
       if (empSnap.exists()) {
         const emp = Object.values(empSnap.val())[0];
-        userName = emp.fullName; userPosition = emp.position;
+        userName = emp.fullName;
+        userPosition = emp.position;
       } else {
-        userName = profile.displayName; userPosition = "ไม่ทราบตำแหน่ง";
+        userName = profile.displayName;
+        userPosition = "ไม่ทราบตำแหน่ง";
       }
-      document.getElementById("empInfo").textContent = `👤 ${userName} (${userPosition})`;
+
+      // ตั้งค่า empName และ empPosition แยกบรรทัด
+      document.getElementById("empName").textContent = `${userName}`;
+      document.getElementById("empPosition").textContent = `ตำแหน่ง: ${userPosition}`;
+
       loadBorrowed();
     }
 
