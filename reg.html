@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>เพิ่มข้อมูลพนักงาน</title>
+  <title>ลงทะเบียนพนักงาน</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -22,7 +22,7 @@
   <input type="text" id="fullName" placeholder="ชื่อ - สกุล" required>
   <input type="text" id="position" placeholder="ตำแหน่ง" required>
   <input type="email" id="email" placeholder="อีเมล" required>
-  <input type="text" id="userId" placeholder="UserId จาก LINE" readonly>
+  <input type="text" id="userIdLine" placeholder="UserId จาก LINE" readonly>
   <button onclick="saveEmployee()">✅ บันทึกข้อมูล</button>
   <p id="status"></p>
 </div>
@@ -36,12 +36,11 @@ projectId: "register-58eea",
 storageBucket: "register-58eea.firebasestorage.app",
 messagingSenderId: "629204385342",
 appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
-measurementId: "G-FFLKXCZE64"
-  };
+measurementId: "G-FFLKXCZE64"  };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const LIFF_ID = "2007335399-B181xl9Z"; // แทนที่ด้วย LIFF ID ของคุณ
+  const LIFF_ID = "2007335399-4yV9bMq0"; // เปลี่ยนเป็น LIFF ID ของคุณ
 
   window.onload = async () => {
     await liff.init({ liffId: LIFF_ID });
@@ -50,7 +49,7 @@ measurementId: "G-FFLKXCZE64"
       return;
     }
     const profile = await liff.getProfile();
-    document.getElementById("userId").value = profile.userId;
+    document.getElementById("userIdLine").value = profile.userId;
   };
 
   async function saveEmployee() {
@@ -58,15 +57,15 @@ measurementId: "G-FFLKXCZE64"
     const fullName = document.getElementById("fullName").value.trim();
     const position = document.getElementById("position").value.trim();
     const email = document.getElementById("email").value.trim();
-    const userId = document.getElementById("userId").value;
+    const userIdLine = document.getElementById("userIdLine").value;
 
-    if (!empId || !fullName || !position || !email || !userId) {
+    if (!empId || !fullName || !position || !email || !userIdLine) {
       return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
     }
 
-    const check = await db.ref("employees").orderByChild("userId").equalTo(userId).get();
+    const check = await db.ref("employees").orderByChild("userIdLine").equalTo(userIdLine).get();
     if (check.exists()) {
-      document.getElementById("status").textContent = "⚠️ userId นี้ลงทะเบียนแล้ว";
+      document.getElementById("status").textContent = "⚠️ userIdLine นี้ลงทะเบียนแล้ว";
       return;
     }
 
@@ -75,7 +74,7 @@ measurementId: "G-FFLKXCZE64"
       fullName,
       position,
       email,
-      userId
+      userIdLine
     });
 
     document.getElementById("status").textContent = "✅ บันทึกข้อมูลเรียบร้อย";
