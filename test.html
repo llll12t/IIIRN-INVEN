@@ -17,8 +17,9 @@
   <!-- หน้าแรก -->
   <div id="homePage" class="max-w-md mx-auto p-6 bg-gray-200 rounded-2xl mt-6">
     <h2 class="text-xl font-semibold mb-4">รายการ ยืม-คืนอุปกรณ์</h2>
-    <p id="empInfo" class="mb-4">กำลังโหลดชื่อพนักงาน...</p>
-    <div class="flex space-x-2 mb-4">
+    <!-- แสดงชื่อกับตำแหน่งแยกบรรทัด -->
+    <p id="empName" class="font-semibold mb-1">กำลังโหลดชื่อพนักงาน...</p>
+    <p id="empPosition" class="text-gray-600 mb-4">&nbsp;</p>    <div class="flex space-x-2 mb-4">
       <button onclick="showPage('borrow')" class="flex-1 bg-[#0A1E49] text-white py-2 rounded-xl font-bold">↑ ยืม</button>
       <button onclick="showPage('return')" class="flex-1 bg-[#FF9966] text-white py-2 rounded-xl font-bold">↓ คืน</button>
     </div>
