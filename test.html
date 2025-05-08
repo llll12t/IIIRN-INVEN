@@ -1,231 +1,330 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8">
   <title>ระบบยืม-คืนอุปกรณ์</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <!-- LIFF + Firebase + jsQR -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
-  <style>
-    body { font-family: sans-serif; background: #efefef; }
-    .page { max-width: 400px; margin: auto; padding: 20px; background: #f4f4f4; border-radius: 16px; }
-    .hidden { display: none; }
-    button {
-      border: none; border-radius: 14px; padding: 12px 16px;
-      font-weight: bold; margin: 5px 4px; width: 45%;
-    }
-    .btn-scan { background: #0A1E49; color: white; }
-    .btn-back { background: white; border: 1px solid #ccc; }
-    .btn-borrow { background: #0A1E49; color: white; }
-    .btn-return { background: #FF9966; color: white; }
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    th, td { padding: 8px; border: 1px solid #ddd; text-align: center; }
-    th { background: #1c2950; color: white; }
-    td { background: white; }
-    video { display: none; width: 100%; border-radius: 10px; margin-top: 10px; }
-    #scanStatus { margin-top: 10px; font-weight: bold; }
-  </style>
 </head>
-<body>
 
-<div class="page" id="homePage">
-  <h2>รายการ ยืม-คืนอุปกรณ์</h2>
-  <p id="empInfo">กำลังโหลดชื่อพนักงาน...</p>
-  <div style="display: flex; justify-content: space-between;">
-    <button class="btn-borrow" onclick="showPage('borrow')">↑ ยืม</button>
-    <button class="btn-return" onclick="showPage('return')">↓ คืน</button>
+<body class="bg-gray-100 font-sans flex justify-center py-6">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-5">
+    <!-- Profile -->
+    <div class="flex items-center mb-4">
+      <img id="profilePic" class="w-14 h-14 rounded-full mr-4 bg-gray-200" alt="Profile">
+      <div>
+        <p id="empName" class="text-lg font-semibold text-gray-900">กำลังโหลดชื่อ...</p>
+        <p id="empPosition" class="text-gray-600">กำลังโหลดตำแหน่ง...</p>
+      </div>
+    </div>
+
+    <!-- Nav home/borrow/return -->
+    <div class="flex mb-4 space-x-2">
+      <button id="btnHome" class="flex-1 py-2 rounded-xl bg-blue-900 text-white">หน้าหลัก</button>
+      <button id="btnBorrow" class="flex-1 py-2 rounded-xl bg-blue-900 text-white">ยืม</button>
+      <button id="btnReturn" class="flex-1 py-2 rounded-xl bg-orange-400 text-white">คืน</button>
+    </div>
+
+    <!-- HOME -->
+    <div id="homePage">
+      <p class="text-gray-700 mb-2">รายการที่ยังไม่ส่งคืน</p>
+      <table class="w-full border border-blue-900 rounded-xl overflow-hidden">
+        <thead class="bg-blue-900 text-white">
+          <tr>
+            <th class="py-2">รหัสอุปกรณ์</th>
+            <th class="py-2">ชื่ออุปกรณ์</th>
+          </tr>
+        </thead>
+        <tbody id="borrowedList" class="bg-white"></tbody>
+      </table>
+    </div>
+
+    <!-- BORROW -->
+    <div id="borrowPage" class="hidden">
+      <div class="flex mb-4 space-x-2">
+        <button id="scanBorrow" class="flex-1 py-2 rounded-xl bg-blue-900 text-white">SCAN QR</button>
+        <button id="backBorrow" class="flex-1 py-2 rounded-xl bg-gray-300 text-gray-700">← กลับ</button>
+      </div>
+      <div class="relative border-2 border-blue-900 rounded-xl h-40 mb-4 overflow-hidden">
+        <video id="videoBorrow" class="w-full h-full object-cover hidden"></video>
+        <div id="scanStatusBorrow"
+             class="absolute inset-0 flex items-center justify-center text-gray-500">
+          CAMERA
+        </div>
+      </div>
+      <ul id="basketBorrow" class="space-y-2 mb-4"></ul>
+      <!-- ขั้นตอนยืนยัน -->
+      <button id="checkBorrow"
+              class="w-full py-3 rounded-xl bg-orange-400 text-blue-900 font-semibold mb-2">
+        ตรวจสอบ
+      </button>
+      <div id="confirmBorrow" class="hidden space-y-2">
+        <p class="text-center text-gray-700">ยืนยันการยืมอุปกรณ์?</p>
+        <button id="submitBorrow"
+                class="w-full py-3 rounded-xl bg-blue-900 text-white font-semibold">
+          ✅ ยืนยัน
+        </button>
+        <button id="cancelBorrow"
+                class="w-full py-3 rounded-xl bg-gray-300 text-gray-700 font-semibold">
+          ❌ ยกเลิก
+        </button>
+      </div>
+    </div>
+
+    <!-- RETURN -->
+    <div id="returnPage" class="hidden">
+      <div class="flex mb-4 space-x-2">
+        <button id="scanReturn" class="flex-1 py-2 rounded-xl bg-blue-900 text-white">SCAN QR</button>
+        <button id="backReturn" class="flex-1 py-2 rounded-xl bg-gray-300 text-gray-700">← กลับ</button>
+      </div>
+      <div class="relative border-2 border-blue-900 rounded-xl h-40 mb-4 overflow-hidden">
+        <video id="videoReturn" class="w-full h-full object-cover hidden"></video>
+        <div id="scanStatusReturn"
+             class="absolute inset-0 flex items-center justify-center text-gray-500">
+          CAMERA
+        </div>
+      </div>
+      <ul id="basketReturn" class="space-y-2 mb-4"></ul>
+      <!-- ขั้นตอนยืนยัน -->
+      <button id="checkReturn"
+              class="w-full py-3 rounded-xl bg-orange-400 text-blue-900 font-semibold mb-2">
+        ตรวจสอบ
+      </button>
+      <div id="confirmReturn" class="hidden space-y-2">
+        <p class="text-center text-gray-700">ยืนยันการคืนอุปกรณ์?</p>
+        <button id="submitReturn"
+                class="w-full py-3 rounded-xl bg-blue-900 text-white font-semibold">
+          ✅ ยืนยัน
+        </button>
+        <button id="cancelReturn"
+                class="w-full py-3 rounded-xl bg-gray-300 text-gray-700 font-semibold">
+          ❌ ยกเลิก
+        </button>
+      </div>
+    </div>
   </div>
-  <table>
-    <thead><tr><th>รหัสอุปกรณ์</th><th>ชื่ออุปกรณ์</th></tr></thead>
-    <tbody id="borrowedList"></tbody>
-  </table>
-</div>
 
-<div class="page hidden" id="borrowPage">
-  <h2>ยืมอุปกรณ์</h2>
-  <div style="display: flex; justify-content: space-between;">
-    <button class="btn-scan" onclick="startScan('borrow')">📷 Scan QR</button>
-    <button class="btn-back" onclick="showPage('home')">← กลับ</button>
-  </div>
-  <video id="video" playsinline></video>
-  <ul id="basketBorrow"></ul>
-  <p id="scanStatus"></p>
-  <button class="btn-borrow" onclick="submitAction('borrow')">✅ ยืนยันยืม</button>
-</div>
+  <script>
+    // ‣ Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
+      authDomain: "register-58eea.firebaseapp.com",
+      databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "register-58eea",
+      storageBucket: "register-58eea.appspot.com",
+      messagingSenderId: "629204385342",
+      appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+      measurementId: "G-FFLKXCZE64"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<div class="page hidden" id="returnPage">
-  <h2>คืนอุปกรณ์</h2>
-  <div style="display: flex; justify-content: space-between;">
-    <button class="btn-scan" onclick="startScan('return')">📷 Scan QR</button>
-    <button class="btn-back" onclick="showPage('home')">← กลับ</button>
-  </div>
-  <video id="videoReturn" playsinline></video>
-  <ul id="basketReturn"></ul>
-  <p id="scanStatus"></p>
-  <button class="btn-return" onclick="submitAction('return')">✅ ยืนยันคืน</button>
-</div>
+    const LIFF_ID = "2007335399-4yV9bMq0";
 
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
-authDomain: "register-58eea.firebaseapp.com",
-databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
-projectId: "register-58eea",
-storageBucket: "register-58eea.firebasestorage.app",
-messagingSenderId: "629204385342",
-appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
-measurementId: "G-FFLKXCZE64"  };
+    let userIdLine, userName, userPosition;
+    let basket = [], currentMode = ""; // "borrow" หรือ "return"
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-
-  const LIFF_ID = "2007335399-4yV9bMq0"; // ใส่ LIFF ID จริงของคุณ
-
-  let userIdLine = "";
-  let userName = "";
-  let userPosition = "";
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  let basket = [];
-  let currentMode = "";
-
-  async function initLIFF() {
-    await liff.init({ liffId: LIFF_ID });
-    if (!liff.isInClient() && !liff.isLoggedIn()) {
-      liff.login(); return;
-    }
-
-    const profile = await liff.getProfile();
-    userIdLine = profile.userId;
-
-    const empSnap = await db.ref("employees").orderByChild("userIdLine").equalTo(userIdLine).get();
-    if (empSnap.exists()) {
-      const emp = Object.values(empSnap.val())[0];
-      userName = emp.fullName;
-      userPosition = emp.position;
-    } else {
-      userName = profile.displayName;
-      userPosition = "ไม่ทราบตำแหน่ง";
-    }
-
-    document.getElementById("empInfo").textContent = `👤 ${userName} (${userPosition})`;
-    loadBorrowed();
-  }
-
-  function showPage(page) {
-    ["homePage", "borrowPage", "returnPage"].forEach(id =>
-      document.getElementById(id).classList.add("hidden")
-    );
-    document.getElementById(`${page}Page`).classList.remove("hidden");
-    basket = [];
-    updateList();
-    document.getElementById("scanStatus").textContent = "";
-    if (page === "home") loadBorrowed();
-  }
-
-  async function loadBorrowed() {
-    const tbody = document.getElementById("borrowedList");
-    tbody.innerHTML = "";
-    const snapshot = await db.ref("devices").once("value");
-    snapshot.forEach(child => {
-      const d = child.val();
-      if (d.status === "กำลังใช้งาน" && d.lastUser.includes(userName)) {
-        tbody.innerHTML += `<tr><td>${d.deviceId}</td><td>${d.deviceName}</td></tr>`;
+    // เรียก LIFF + โหลดข้อมูล
+    async function initLIFF() {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isInClient() && !liff.isLoggedIn()) {
+        return liff.login();
       }
-    });
-  }
+      const profile = await liff.getProfile();
+      userIdLine = profile.userId;
+      document.getElementById("profilePic").src = profile.pictureUrl;
+      document.getElementById("empName").textContent = profile.displayName;
 
-  async function startScan(mode) {
-    currentMode = mode;
-    const video = document.getElementById(mode === "borrow" ? "video" : "videoReturn");
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    video.srcObject = stream;
-    video.setAttribute("playsinline", true);
-    video.play();
-    video.style.display = "block";
-    requestAnimationFrame(() => tick(video));
-  }
+      // ถ้ามีข้อมูลตำแหน่งจาก DB
+      const empSnap = await db.ref("employees")
+        .orderByChild("userIdLine").equalTo(userIdLine).get();
+      if (empSnap.exists()) {
+        const emp = Object.values(empSnap.val())[0];
+        userPosition = emp.position;
+      } else {
+        userPosition = "ไม่ทราบตำแหน่ง";
+      }
+      document.getElementById("empPosition").textContent = userPosition;
+      loadBorrowed();
+    }
 
-  function tick(video) {
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      const scanStatus = document.getElementById("scanStatus");
+    // สลับหน้า
+    function showPage(page) {
+      ["homePage", "borrowPage", "returnPage"].forEach(id =>
+        document.getElementById(id).classList.add("hidden")
+      );
+      document.getElementById(page + "Page").classList.remove("hidden");
+      // ตั้งค่าปุ่ม Nav
+      document.querySelectorAll("#btnHome, #btnBorrow, #btnReturn").forEach(btn => {
+        btn.classList.remove("bg-orange-400", "bg-blue-900", "text-white");
+      });
+      if (page === "home") {
+        document.getElementById("btnHome").classList.add("bg-blue-900", "text-white");
+        loadBorrowed();
+      } else if (page === "borrow") {
+        document.getElementById("btnBorrow").classList.add("bg-blue-900", "text-white");
+      } else {
+        document.getElementById("btnReturn").classList.add("bg-orange-400", "text-white");
+      }
+      // รีเซ็ต basket + confirm section
+      basket = [];
+      updateList();
+      hideConfirm("borrow");
+      hideConfirm("return");
+    }
 
-      if (code) {
-        const deviceId = code.data.trim();
-        db.ref("devices/" + deviceId).get().then(snapshot => {
-          if (!snapshot.exists()) {
-            scanStatus.textContent = `❌ ไม่พบอุปกรณ์: ${deviceId}`;
-            scanStatus.style.color = "red";
-            return;
-          }
-          const dev = snapshot.val();
-          if (currentMode === "borrow" && dev.status === "กำลังใช้งาน") {
-            scanStatus.textContent = `⚠️ ${deviceId} (${dev.deviceName}) ถูกยืมอยู่แล้ว`;
-            scanStatus.style.color = "orange";
-            return;
-          }
-          if (!basket.includes(deviceId)) {
-            basket.push(deviceId);
-            updateList();
-          }
-          scanStatus.textContent = `✅ เจออุปกรณ์: ${deviceId} (${dev.deviceName})`;
-          scanStatus.style.color = "green";
+    // โหลดรายการที่ยืมยังไม่คืน
+    async function loadBorrowed() {
+      const tbody = document.getElementById("borrowedList");
+      tbody.innerHTML = "";
+      const snap = await db.ref("devices").once("value");
+      snap.forEach(ch => {
+        const d = ch.val();
+        if (d.status === "กำลังใช้งาน" && d.lastUser.includes(profile.displayName)) {
+          tbody.innerHTML += `<tr>
+            <td class="py-2 border-b">${d.deviceId}</td>
+            <td class="py-2 border-b">${d.deviceName}</td>
+          </tr>`;
+        }
+      });
+    }
+
+    // เริ่มสแกน
+    async function startScan(mode) {
+      currentMode = mode;
+      const video = document.getElementById(mode === "borrow" ? "videoBorrow" : "videoReturn");
+      const statusEl = document.getElementById(mode === "borrow" ? "scanStatusBorrow" : "scanStatusReturn");
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+      video.play();
+      video.classList.remove("hidden");
+      statusEl.textContent = "";
+      requestAnimationFrame(() => tick(video, statusEl));
+    }
+
+    // อ่าน QR ทีละเฟรม
+    function tick(video, statusEl) {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data,
+                          canvas.width, canvas.height);
+        if (code) {
+          const id = code.data.trim();
+          db.ref("devices/" + id).get().then(snap => {
+            if (!snap.exists()) {
+              statusEl.textContent = `❌ ไม่พบอุปกรณ์: ${id}`;
+              return;
+            }
+            const d = snap.val();
+            if (currentMode === "borrow" && d.status === "กำลังใช้งาน") {
+              statusEl.textContent = `⚠️ ${id} ถูกยืมอยู่แล้ว`;
+              return;
+            }
+            if (!basket.includes(id)) {
+              basket.push(id);
+              updateList();
+            }
+            statusEl.textContent = `✅ เจออุปกรณ์: ${id}`;
+          });
+        }
+      }
+      if (video.srcObject) requestAnimationFrame(() => tick(video, statusEl));
+    }
+
+    // อัปเดตรายการ
+    function updateList() {
+      const listEl = document.getElementById(
+        currentMode === "return" ? "basketReturn" : "basketBorrow"
+      );
+      listEl.innerHTML = basket.map(id => `
+        <li class="flex justify-between items-center p-2 bg-white rounded-lg border">
+          <span>📦 ${id}</span>
+          <button data-id="${id}" class="text-red-500 font-bold remove-btn">X</button>
+        </li>
+      `).join("");
+      // attach remove
+      listEl.querySelectorAll(".remove-btn").forEach(btn => {
+        btn.onclick = () => {
+          basket = basket.filter(x => x !== btn.dataset.id);
+          updateList();
+        };
+      });
+    }
+
+    // แสดง/ซ่อน confirm section
+    function hideConfirm(mode) {
+      document.getElementById("confirm"+capitalize(mode)).classList.add("hidden");
+      document.getElementById("check"+capitalize(mode)).classList.remove("hidden");
+    }
+    function showConfirm(mode) {
+      document.getElementById("confirm"+capitalize(mode)).classList.remove("hidden");
+      document.getElementById("check"+capitalize(mode)).classList.add("hidden");
+    }
+    function capitalize(s) { return s.charAt(0).toUpperCase()+s.slice(1); }
+
+    // บันทึกจริง
+    async function doSubmit(mode) {
+      const refName = mode === "borrow" ? "borrowRecords" : "returnRecords";
+      const statusText = mode === "borrow" ? "ยืม" : "คืน";
+      const now = new Date().toISOString();
+      for (let id of basket) {
+        const snap = await db.ref("devices/" + id).get();
+        if (!snap.exists()) continue;
+        const d = snap.val();
+        if (mode==="borrow" && d.status==="กำลังใช้งาน") continue;
+        const key = db.ref().child(refName).push().key;
+        await db.ref(`${refName}/${key}`).set({
+          deviceId: id,
+          deviceName: d.deviceName||"",
+          userId: userIdLine,
+          userName,
+          userPosition,
+          status: statusText,
+          date: now
+        });
+        await db.ref("devices/" + id).update({
+          status: mode==="borrow"?"กำลังใช้งาน":"พร้อมใช้งาน",
+          lastUser: mode==="borrow"?userName+" ("+userPosition+")":"",
+          lastUserId: mode==="borrow"?userIdLine:""
         });
       }
+      alert("✅ บันทึกสำเร็จ");
+      showPage("home");
     }
-    if (video.srcObject) requestAnimationFrame(() => tick(video));
-  }
 
-  function updateList() {
-    document.getElementById("basketBorrow").innerHTML = basket.map(id => `<li>📦 ${id}</li>`).join('');
-    document.getElementById("basketReturn").innerHTML = basket.map(id => `<li>📦 ${id}</li>`).join('');
-  }
+    // โยงปุ่ม
+    window.addEventListener("DOMContentLoaded", () => {
+      // Nav
+      document.getElementById("btnHome").onclick   = () => showPage("home");
+      document.getElementById("btnBorrow").onclick = () => showPage("borrow");
+      document.getElementById("btnReturn").onclick = () => showPage("return");
+      // Borrow
+      document.getElementById("scanBorrow").onclick   = () => startScan("borrow");
+      document.getElementById("backBorrow").onclick   = () => showPage("home");
+      document.getElementById("checkBorrow").onclick  = () => showConfirm("borrow");
+      document.getElementById("cancelBorrow").onclick = () => hideConfirm("borrow");
+      document.getElementById("submitBorrow").onclick = () => doSubmit("borrow");
+      // Return
+      document.getElementById("scanReturn").onclick   = () => startScan("return");
+      document.getElementById("backReturn").onclick   = () => showPage("home");
+      document.getElementById("checkReturn").onclick  = () => showConfirm("return");
+      document.getElementById("cancelReturn").onclick = () => hideConfirm("return");
+      document.getElementById("submitReturn").onclick = () => doSubmit("return");
 
-  async function submitAction(mode) {
-    const refName = mode === "borrow" ? "borrowRecords" : "returnRecords";
-    const statusText = mode === "borrow" ? "ยืม" : "คืน";
-    const now = new Date().toISOString();
-
-    for (let deviceId of basket) {
-      const snap = await db.ref("devices/" + deviceId).get();
-      if (!snap.exists()) continue;
-
-      const dev = snap.val();
-      if (mode === "borrow" && dev.status === "กำลังใช้งาน") continue;
-
-      const recId = db.ref().child(refName).push().key;
-      await db.ref(`${refName}/${recId}`).set({
-        deviceId,
-        deviceName: dev.deviceName || "ไม่ทราบชื่อ",
-        userId: userIdLine,
-        userName,
-        userPosition,
-        status: statusText,
-        date: now
-      });
-
-     await db.ref("devices/" + deviceId).update({
-      status: mode === "borrow" ? "กำลังใช้งาน" : "พร้อมใช้งาน",
-      lastUser: `${userName} (${userPosition})`,
-      lastUserId: mode === "borrow" ? userIdLine : ""  // ลบ user ออกเมื่อลงคืน
+      initLIFF();
     });
-
-    }
-
-    alert("✅ บันทึกสำเร็จ");
-    showPage("home");
-  }
-
-  initLIFF();
-</script>
-
+  </script>
 </body>
+
 </html>
