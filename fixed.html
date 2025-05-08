@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>แจ้งซ่อมอุปกรณ์</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    input, textarea, button, select {
+      width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 8px;
+    }
+    video { width: 100%; border-radius: 10px; margin-top: 10px; display: none; }
+    #previewImage { max-width: 100%; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>📋 แจ้งซ่อมอุปกรณ์</h2>
+<p>ชื่อผู้แจ้ง: <span id="reporterName">กำลังโหลด...</span></p>
+
+<button onclick="startScan()">📷 สแกน QR อุปกรณ์</button>
+<video id="video" playsinline></video>
+
+<input type="text" id="deviceId" placeholder="รหัสอุปกรณ์" readonly>
+<input type="text" id="deviceName" placeholder="ชื่ออุปกรณ์" readonly>
+<input type="text" id="title" placeholder="หัวข้อปัญหา">
+<textarea id="details" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+<input type="file" id="imageInput" accept="image/*">
+<img id="previewImage" src="#" alt="">
+
+<button onclick="submitRepair()">✅ ส่งแจ้งซ่อม</button>
+<p id="statusText"></p>
+
+<script>
+  const firebaseConfig = {
+apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
+authDomain: "register-58eea.firebaseapp.com",
+databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId: "register-58eea",
+storageBucket: "register-58eea.firebasestorage.app",
+messagingSenderId: "629204385342",
+appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+measurementId: "G-FFLKXCZE64"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const storage = firebase.storage();
+
+  const LIFF_ID = "2007335399-BbMx4yd9";
+  let userIdLine = "";
+  let reporterName = "";
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  window.onload = async () => {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isInClient() && !liff.isLoggedIn()) {
+      liff.login(); return;
+    }
+    const profile = await liff.getProfile();
+    userIdLine = profile.userId;
+
+    const empSnap = await db.ref("employees").orderByChild("userIdLine").equalTo(userIdLine).get();
+    if (empSnap.exists()) {
+      const emp = Object.values(empSnap.val())[0];
+      reporterName = emp.fullName;
+    } else {
+      reporterName = profile.displayName;
+    }
+    document.getElementById("reporterName").textContent = reporterName;
+  };
+
+  async function startScan() {
+    const video = document.getElementById("video");
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    video.srcObject = stream;
+    video.play();
+    video.style.display = "block";
+    requestAnimationFrame(() => scanLoop(video));
+  }
+
+  function scanLoop(video) {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, canvas.width, canvas.height);
+      if (code) {
+        const deviceId = code.data.trim();
+        db.ref("devices/" + deviceId).get().then(snapshot => {
+          if (!snapshot.exists()) return alert("ไม่พบอุปกรณ์นี้");
+          const dev = snapshot.val();
+          document.getElementById("deviceId").value = deviceId;
+          document.getElementById("deviceName").value = dev.deviceName || "ไม่ทราบชื่อ";
+        });
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.style.display = "none";
+        return;
+      }
+    }
+    if (video.srcObject) requestAnimationFrame(() => scanLoop(video));
+  }
+
+  document.getElementById("imageInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => document.getElementById("previewImage").src = e.target.result;
+      reader.readAsDataURL(file);
+    }
+  });
+
+  async function submitRepair() {
+    const deviceId = document.getElementById("deviceId").value.trim();
+    const deviceName = document.getElementById("deviceName").value.trim();
+    const title = document.getElementById("title").value.trim();
+    const details = document.getElementById("details").value.trim();
+    const file = document.getElementById("imageInput").files[0];
+
+    if (!deviceId || !title || !details) {
+      alert("กรุณากรอกข้อมูลให้ครบ"); return;
+    }
+
+    const id = db.ref().child("repairReports").push().key;
+    const date = new Date().toISOString();
+
+    let imageUrl = "";
+    if (file) {
+      const snap = await storage.ref("repair_images/" + id).put(file);
+      imageUrl = await snap.ref.getDownloadURL();
+    }
+
+    await db.ref("repairReports/" + id).set({
+      id,
+      date,
+      reporterName,
+      userIdLine,
+      deviceId,
+      deviceName,
+      title,
+      details,
+      status: "รอซ่อม",
+      imageUrl
+    });
+
+    document.getElementById("statusText").textContent = "✅ แจ้งซ่อมเรียบร้อยแล้ว";
+  }
+</script>
+
+</body>
+</html>
