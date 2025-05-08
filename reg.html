@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เพิ่มข้อมูลพนักงาน</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+    .form { background: white; padding: 20px; border-radius: 10px; max-width: 400px; margin: auto; }
+    input, button { width: 100%; margin-bottom: 12px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+    button { background: #0A1E49; color: white; font-weight: bold; border: none; }
+  </style>
+</head>
+<body>
+
+<div class="form">
+  <h2>ลงทะเบียนพนักงาน</h2>
+  <input type="text" id="empId" placeholder="รหัสพนักงาน" required>
+  <input type="text" id="fullName" placeholder="ชื่อ - สกุล" required>
+  <input type="text" id="position" placeholder="ตำแหน่ง" required>
+  <input type="email" id="email" placeholder="อีเมล" required>
+  <input type="text" id="userId" placeholder="UserId จาก LINE" readonly>
+  <button onclick="saveEmployee()">✅ บันทึกข้อมูล</button>
+  <p id="status"></p>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
+authDomain: "register-58eea.firebaseapp.com",
+databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId: "register-58eea",
+storageBucket: "register-58eea.firebasestorage.app",
+messagingSenderId: "629204385342",
+appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+measurementId: "G-FFLKXCZE64"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const LIFF_ID = "2007335399-B181xl9Z"; // แทนที่ด้วย LIFF ID ของคุณ
+
+  window.onload = async () => {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isInClient() && !liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+    const profile = await liff.getProfile();
+    document.getElementById("userId").value = profile.userId;
+  };
+
+  async function saveEmployee() {
+    const empId = document.getElementById("empId").value.trim();
+    const fullName = document.getElementById("fullName").value.trim();
+    const position = document.getElementById("position").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const userId = document.getElementById("userId").value;
+
+    if (!empId || !fullName || !position || !email || !userId) {
+      return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+    }
+
+    const check = await db.ref("employees").orderByChild("userId").equalTo(userId).get();
+    if (check.exists()) {
+      document.getElementById("status").textContent = "⚠️ userId นี้ลงทะเบียนแล้ว";
+      return;
+    }
+
+    await db.ref("employees/" + empId).set({
+      empId,
+      fullName,
+      position,
+      email,
+      userId
+    });
+
+    document.getElementById("status").textContent = "✅ บันทึกข้อมูลเรียบร้อย";
+  }
+</script>
+
+</body>
+</html>
