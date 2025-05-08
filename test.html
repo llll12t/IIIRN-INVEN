@@ -15,19 +15,19 @@
 <body class="bg-gray-100 font-sans">
 
   <!-- หน้าแรก -->
-  <div id="homePage" class="max-w-md mx-auto p-6 bg-gray-200 rounded-2xl mt-6">
-    <h2 class="text-xl font-semibold mb-4">รายการ ยืม-คืนอุปกรณ์</h2>
+  <div id="homePage" class="max-w-md mx-auto p-4  rounded-2xl mx-2 mt-2">
+    <h2 class="text-md font-semibold mb-4">รายการ ยืม-คืนอุปกรณ์</h2>
     <p id="empName" class="font-semibold mb-1">กำลังโหลดชื่อพนักงาน...</p>
     <p id="empPosition" class="text-gray-600 mb-4">&nbsp;</p>
     <div class="flex space-x-2 mb-4">
-      <button onclick="showPage('borrow')" class="flex-1 bg-[#0A1E49] text-white py-2 rounded-xl font-bold">↑ ยืม</button>
-      <button onclick="showPage('return')" class="flex-1 bg-[#FF9966] text-white py-2 rounded-xl font-bold">↓ คืน</button>
+      <button onclick="showPage('borrow')" class="flex-1 bg-[#0A1E49] text-white py-3 rounded-full font-bold">↑ ยืม</button>
+      <button onclick="showPage('return')" class="flex-1 bg-[#FF9966] text-white py-3 rounded-full font-bold">↓ คืน</button>
     </div>
-    <table class="w-full border-collapse">
+    <table class="w-full border-collapse min-h-40 bg-white rounded-b-2xl">
       <thead>
         <tr>
-          <th class="py-2 px-4 bg-[#1c2950] text-white">รหัสอุปกรณ์</th>
-          <th class="py-2 px-4 bg-[#1c2950] text-white">ชื่ออุปกรณ์</th>
+          <th class="py-2 px-4 bg-[#1c2950] w-40 rounded-tl-2xl text-white">รหัสอุปกรณ์</th>
+          <th class="py-2 px-4 bg-[#656e88] rounded-tr-2xl  text-white">ชื่ออุปกรณ์</th>
         </tr>
       </thead>
       <tbody id="borrowedList"></tbody>
@@ -35,35 +35,35 @@
   </div>
 
   <!-- หน้ายืม -->
-  <div id="borrowPage" class="max-w-md mx-auto p-6 bg-gray-200 rounded-2xl mt-6 hidden">
-    <h2 class="text-xl font-semibold mb-4">ยืมอุปกรณ์</h2>
+  <div id="borrowPage" class="max-w-md mx-auto p-4  rounded-2xl mx-2 mt-2 hidden">
+    <h2 class="text-md font-semibold mb-4">ยืมอุปกรณ์</h2>
     <div class="flex space-x-2 mb-4">
-      <button onclick="startScan('borrow')" class="flex-1 bg-[#0A1E49] text-white py-2 rounded-xl font-bold flex items-center justify-center gap-2">
-        📷 Scan QR
+      <button onclick="startScan('borrow')" class="flex-1 bg-[#0A1E49] text-white py-3 rounded-full font-bold flex items-center justify-center gap-2">
+          Scan QR
       </button>
-      <button onclick="showPage('home')" class="flex-1 bg-white border border-gray-300 py-2 rounded-xl font-bold">
+      <button onclick="showPage('home')" class="flex-1 bg-white border border-gray-300 py-3 rounded-full font-bold">
         ← กลับ
       </button>
     </div>
-    <video id="video" playsinline class="w-full rounded-lg mb-4 hidden"></video>
+    <video id="video" playsinline class="w-full rounded-lg mb-4 min-h-40 hidden"></video>
     <ul id="basketBorrow" class="mb-4 space-y-2"></ul>
     <p id="scanStatusBorrow" class="font-semibold mb-4"></p>
     <!-- ปุ่มยืนยันยืม (disabled ถ้าไม่มีรายการ) -->
     <button
       id="btnConfirmBorrow"
       onclick="openModal('borrow')"
-      class="w-full bg-[#0A1E49] text-white py-2 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+      class="w-full bg-[#0A1E49] text-white py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
       disabled>
-      ✅ ยืนยันยืม
+       ยืนยันยืม
     </button>
   </div>
 
   <!-- คืนอุปกรณ์ -->
   <div id="returnPage" class="max-w-md mx-auto p-6 bg-gray-200 rounded-2xl mt-6 hidden">
-    <h2 class="text-xl font-semibold mb-4">คืนอุปกรณ์</h2>
+    <h2 class="text-md font-semibold mb-4">คืนอุปกรณ์</h2>
     <div class="flex space-x-2 mb-4">
       <button onclick="startScan('return')" class="flex-1 bg-[#0A1E49] text-white py-2 rounded-xl font-bold flex items-center justify-center gap-2">
-        📷 Scan QR
+         Scan QR
       </button>
       <button onclick="showPage('home')" class="flex-1 bg-white border border-gray-300 py-2 rounded-xl font-bold">
         ← กลับ
@@ -138,7 +138,7 @@
         userPosition = "ไม่ทราบตำแหน่ง";
       }
 
-      document.getElementById("empName").textContent = `👤 ${userName}`;
+      document.getElementById("empName").textContent = ` ${userName}`;
       document.getElementById("empPosition").textContent = `ตำแหน่ง: ${userPosition}`;
       loadBorrowed();
     }
