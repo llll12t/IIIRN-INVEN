@@ -1,126 +1,415 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
   <meta charset="UTF-8">
   <title>Dashboard อุปกรณ์</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-    h2 { margin-top: 30px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #eaeaea; }
-    button {
-      background: #0A1E49; color: white; padding: 6px 12px;
-      border: none; border-radius: 4px; cursor: pointer;
-    }
-    img { border-radius: 4px; max-width: 80px; }
-  </style>
 </head>
-<body>
 
-  <h1>📊 Dashboard ระบบอุปกรณ์</h1>
-  <div id="borrowedDevicesContainer"></div>
+<body class="bg-gray-100">
 
-  <h2>🛠 รายการแจ้งซ่อม</h2>
-  <table>
-    <thead>
-      <tr><th>วันที่</th><th>อุปกรณ์</th><th>อาการ</th><th>ผู้แจ้ง</th><th>สถานะ</th><th>รูป</th></tr>
-    </thead>
-    <tbody id="repairList"></tbody>
-  </table>
+  <div class="flex min-h-screen">
+    <!-- Side Nav -->
+    <aside class="w-64 bg-gray-800 p-6">
+      <h1 class="text-white text-xl font-bold mb-6">จัดการการยืมคืน แจ้งซ่อม</h1>
+      <nav class="space-y-4">
+        <a href="#" class="block bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded">หน้าหลัก</a>
+        <a href="#" class="block bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded">อุปกรณ์</a>
+        <a href="#" class="block bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded">สมาชิก</a>
+      </nav>
+    </aside>
 
-<script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
-authDomain: "register-58eea.firebaseapp.com",
-databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
-projectId: "register-58eea",
-storageBucket: "register-58eea.firebasestorage.app",
-messagingSenderId: "629204385342",
-appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
-measurementId: "G-FFLKXCZE64"  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+      <div class="bg-white p-6 rounded-lg shadow-sm">
 
-  const appsScriptUrl = "https://script.google.com/macros/s/AKfycbxgGncjm0mJlbxYgQh5z4kvfbfefUniF_VKA_gcItazeNS0B5H56CyI5UiBDJCvAnFk_w/exec";
+        <!-- Summary Boxes -->
+        <div id="summaryBoxes" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8"></div>
 
-  // ฟังก์ชันส่งข้อความ LINE
-  function sendLineMessage(userIdLine, userName, deviceList) {
-    const message = `📦 คุณ ${userName} กรุณาคืนอุปกรณ์ดังนี้:\n` +
-      deviceList.map(d => `- ${d.id} : ${d.name}`).join("\n");
+        <!-- อุปกรณ์ที่ยังไม่ได้คืน -->
+        <h2 class="text-2xl font-bold mb-4">อุปกรณ์ที่ยังไม่ได้คืน</h2>
+        <div id="borrowCards" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10"></div>
 
-    fetch(appsScriptUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      mode: "no-cors",
-      body: JSON.stringify({ userId: userIdLine, message })
-    })
-    .then(res => res.text())
-    .then(txt => alert("✅ ส่งข้อความ: " + txt))
-    .catch(err => alert("❌ ERROR: " + err));
-  }
+        <!-- Filter & Table Wrapper -->
+        <div class="border-2 border-blue-500 rounded-lg p-4">
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold">รายการงานซ่อม</h2>
+          </div>
+          <!-- Filters -->
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label class="block text-sm">วันที่ส่งซ่อม</label>
+              <input id="filterDate" type="date" class="border p-1 rounded w-full">
+            </div>
+            <div>
+              <label class="block text-sm">รหัส</label>
+              <input id="filterId" type="text" placeholder="รหัส" class="border p-1 rounded w-full">
+            </div>
+            <div>
+              <label class="block text-sm">ชื่อ</label>
+              <input id="filterName" type="text" placeholder="ชื่อ" class="border p-1 rounded w-full">
+            </div>
+            <div>
+              <label class="block text-sm">สถานะ</label>
+              <input id="filterStatus" type="text" placeholder="สถานะ" class="border p-1 rounded w-full">
+            </div>
+          </div>
 
-  // ดึงรายการอุปกรณ์ที่ยังไม่ได้คืน
-  db.ref("devices").once("value").then(snapshot => {
-    const devices = snapshot.val();
-    const usersMap = {};
-    for (let id in devices) {
-      const d = devices[id];
-      if (d.status === "กำลังใช้งาน") {
-        const key = d.lastUserId || "unknown";
-        if (!usersMap[key]) usersMap[key] = { name: d.lastUser || "-", devices: [] };
-        usersMap[key].devices.push({ id: d.deviceId, name: d.deviceName });
+          <!-- Table -->
+          <table class="min-w-full table-fixed rounded-lg overflow-hidden">
+            <thead class="bg-black">
+              <tr>
+                <th class="py-2 px-4 text-left text-white text-sm">วันที่ส่งซ่อม</th>
+                <th class="w-24 py-2 px-4 text-left text-white text-sm">รหัส</th>
+                <th class="w-36 py-2 px-4 text-left text-white text-sm">ชื่อ</th>
+                <th class="w-48 py-2 px-4 text-left text-white text-sm">หัวข้อ</th>
+                <th class="w-64 py-2 px-4 text-left text-white text-sm">รายละเอียด</th>
+                <th class="w-32 py-2 px-4 text-left text-white text-sm">สถานะ</th>
+                <th class="w-32 py-2 px-4 text-left text-white text-sm">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="repairList" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+          </table>
+
+          <!-- Footer: Rows-per-page & Pagination -->
+          <div class="flex justify-between items-center mt-4">
+            <!-- แสดงจำนวนแถวต่อหน้า -->
+            <div class="flex items-center">
+              <label for="rowsPerPage" class="mr-2">แสดง</label>
+              <select id="rowsPerPage" class="border px-2 py-1 rounded mr-2">
+                <option value="15">15</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <span>แถวต่อหน้า</span>
+            </div>
+            <!-- ปุ่มเลขหน้า -->
+            <div id="pagination" class="flex space-x-2"></div>
+          </div>
+
+        </div>
+
+        <!-- Modal -->
+        <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+          <div class="bg-white rounded-lg w-11/12 md:w-1/2 p-6 relative">
+            <button id="closeModal"
+              class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            <div id="modalContent"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBOCnA32ir0bHOlfIOvJ_ltAj65A5DJSlk",
+      authDomain: "register-58eea.firebaseapp.com",
+      databaseURL: "https://register-58eea-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "register-58eea",
+      storageBucket: "register-58eea.firebasestorage.app",
+      messagingSenderId: "629204385342",
+      appId: "1:629204385342:web:1d9c20a8b3f57269e09b6f",
+      measurementId: "G-FFLKXCZE64"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // State
+    let devicesGrouped = {};
+    let reportsData = [];
+    let currentPage = 1;
+    let rowsPerPage = 15;
+    let countLoaners = 0, countBorrowedItems = 0, countReported = 0, countSuccess = 0;
+
+    // Utils
+    function formatDate(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}-${mm}-${yyyy}`;
+    }
+    function getStatusClass(s) {
+      if (s === "รอซ่อม") return "bg-red-500 text-white";
+      if (s === "ส่งซ่อม") return "bg-yellow-300 text-black";
+      if (s === "ซ่อมสำเร็จ") return "bg-green-500 text-white";
+      return "bg-gray-300 text-black";
+    }
+
+    // Summary boxes
+    const summaryBoxes = document.getElementById("summaryBoxes");
+    function updateSummaryBoxes() {
+      summaryBoxes.innerHTML = `
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${countLoaners}</div>
+          <div class="text-sm">ผู้ยืม</div>
+        </div>
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${countBorrowedItems}</div>
+          <div class="text-sm">ยังไม่คืน</div>
+          <button onclick="notifyAllNotReturned()" class="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded">แจ้งเตือน</button>
+        </div>
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${countReported}</div>
+          <div class="text-sm">แจ้งซ่อม</div>
+        </div>
+        <div class="bg-white border border-gray-300 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold">${countSuccess}</div>
+          <div class="text-sm">ซ่อมสำเร็จ</div>
+        </div>
+      `;
+    }
+
+    // Notify all not-returned
+    function notifyAllNotReturned() {
+      Object.entries(devicesGrouped).forEach(([uid, u]) => {
+        const list = u.items.map(i => `${i.id} ${i.name}`).join(', ');
+        notifyLine(uid, u.user, list);
+      });
+    }
+
+    // Fetch borrowed devices
+    // ======= แทนที่ db.ref("devices").once(...) ด้วย on() =======
+    db.ref("devices").on("value", snapshot => {
+      // เคลียร์ข้อมูลเก่า
+      devicesGrouped = {};
+      countLoaners = 0;
+      countBorrowedItems = 0;
+      const container = document.getElementById("borrowCards");
+      container.innerHTML = "";
+
+      // สร้าง grouped ตามผู้ยืมใหม่
+      snapshot.forEach(child => {
+        const d = child.val();
+        if (d.status === "กำลังใช้งาน" && d.lastUserId) {
+          if (!devicesGrouped[d.lastUserId]) {
+            devicesGrouped[d.lastUserId] = {
+              user: d.lastUser || "ไม่ระบุ",
+              items: []
+            };
+          }
+          devicesGrouped[d.lastUserId].items.push({
+            id: d.deviceId,
+            name: d.deviceName
+          });
+        }
+      });
+
+      // คำนวณสรุป
+      countLoaners = Object.keys(devicesGrouped).length;
+      countBorrowedItems = Object.values(devicesGrouped)
+        .reduce((sum, u) => sum + u.items.length, 0);
+
+      // สร้างการ์ดใหม่
+      Object.entries(devicesGrouped).forEach(([uid, u]) => {
+        const list = u.items.map(i => `${i.id} ${i.name}`).join(', ');
+        const card = document.createElement("div");
+        card.className = "border border-gray-300 rounded-lg p-4 bg-white";
+        card.innerHTML = `
+      <div class="flex justify-between items-center">
+        <h3 class="font-semibold text-lg">👤 ${u.user}</h3>
+        <button
+          onclick="notifyLine('${uid}','${u.user}','${list}')"
+          class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded-full"
+        >แจ้งเตือน</button>
+      </div>
+      <ul class="text-sm mt-2 space-y-1">
+        ${u.items.map(i => `<li>• ${i.id} : ${i.name}</li>`).join('')}
+      </ul>
+    `;
+        container.appendChild(card);
+      });
+
+      // อัปเดต summary UI
+      updateSummaryBoxes();
+    });
+
+
+    // === แก้ไขนี้: ใช้ on("value") แทน once() เพื่ออัปเดตแบบ real-time ===
+    db.ref("repairReports").on("value", snap => {
+      reportsData = [];
+      countReported = 0;
+      countSuccess = 0;
+
+      snap.forEach(child => {
+        const r = child.val();
+        reportsData.push({ id: child.key, ...r });
+        if (r.status === "แจ้งซ่อม") countReported++;
+        if (r.status === "ซ่อมสำเร็จ") countSuccess++;
+      });
+
+      // sort by sendDate desc
+      reportsData.sort((a, b) => new Date(b.sendDate) - new Date(a.sendDate));
+
+      updateSummaryBoxes();
+      renderTablePage();
+    });
+
+    // Filters & pagination
+    document.getElementById("rowsPerPage").addEventListener("change", e => {
+      rowsPerPage = +e.target.value;
+      currentPage = 1;
+      renderTablePage();
+    });
+    ["filterDate", "filterId", "filterName", "filterStatus"].forEach(id => {
+      document.getElementById(id).addEventListener("input", () => {
+        currentPage = 1;
+        renderTablePage();
+      });
+    });
+
+    function renderTablePage() {
+      const fDate = document.getElementById("filterDate").value;
+      const fId = document.getElementById("filterId").value.trim();
+      const fName = document.getElementById("filterName").value.trim();
+      const fStatus = document.getElementById("filterStatus").value.trim();
+
+      const filtered = reportsData.filter(r => {
+        if (fDate && r.sendDate !== fDate) return false;
+        if (fId && !r.deviceId.includes(fId)) return false;
+        if (fName && !r.deviceName.includes(fName)) return false;
+        if (fStatus && !r.status.includes(fStatus)) return false;
+        return true;
+      });
+
+      const tbody = document.getElementById("repairList");
+      tbody.innerHTML = "";
+      const start = (currentPage - 1) * rowsPerPage;
+      const pageData = filtered.slice(start, start + rowsPerPage);
+      pageData.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="py-2 px-4 w-20">${formatDate(r.sendDate)}</td>
+          <td class="py-2 px-4">${r.deviceId}</td>
+          <td class="py-2 px-4">${r.deviceName}</td>
+          <td class="py-2 px-4">${r.title}</td>
+          <td class="py-2 px-4">${r.details}</td>
+          <td class="py-2 px-4">
+            <span class="px-2 py-1 rounded-full ${getStatusClass(r.status)}">${r.status}</span>
+          </td>
+          <td class="py-2 px-4 space-x-2">
+            <button onclick="viewRepair('${r.id}')" class="px-3 py-1 rounded bg-[#7E7AD9] text-white">ดู</button>
+            <button onclick="editRepair('${r.id}')" class="px-3 py-1 rounded bg-[#09054D] text-white">อัปเดต</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const totalPages = Math.ceil(filtered.length / rowsPerPage);
+      const pg = document.getElementById("pagination");
+      pg.innerHTML = "";
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        btn.className = `px-3 py-1 rounded ${i === currentPage ? 'bg-black text-white' : 'bg-gray-300 text-black'}`;
+        btn.onclick = () => { currentPage = i; renderTablePage(); };
+        pg.appendChild(btn);
       }
     }
 
-    const container = document.getElementById("borrowedDevicesContainer");
-    for (let userIdLine in usersMap) {
-      const u = usersMap[userIdLine];
-      const section = document.createElement("div");
-      section.innerHTML = `
-        <h2>👤 ${u.name}</h2>
-        <table>
-          <thead><tr><th>รหัส</th><th>ชื่อ</th></tr></thead>
-          <tbody>${u.devices.map(d => `<tr><td>${d.id}</td><td>${d.name}</td></tr>`).join("")}</tbody>
-        </table>
-        <button data-userid="${userIdLine}" data-username="${u.name}" data-devices='${JSON.stringify(u.devices)}'
-          onclick="handleSend(this)">📨 แจ้งเตือน LINE</button>
-        <hr/>
-      `;
-      container.appendChild(section);
-    }
-  });
-
-  function handleSend(btn) {
-    const userId = btn.getAttribute("data-userid");
-    const userName = btn.getAttribute("data-username");
-    const deviceList = JSON.parse(btn.getAttribute("data-devices"));
-    sendLineMessage(userId, userName, deviceList);
-  }
-
-  // รายการแจ้งซ่อม
-  db.ref("repairReports").once("value").then(snapshot => {
-    const repairList = document.getElementById("repairList");
-    snapshot.forEach(child => {
-      const r = child.val();
-      const date = new Date(r.date).toLocaleString("th-TH");
-      repairList.innerHTML += `
-        <tr>
-          <td>${date}</td>
-          <td>${r.deviceName || r.deviceId}</td>
-          <td>${r.title} - ${r.details}</td>
-          <td>${r.reporterName}</td>
-          <td>${r.status}</td>
-          <td><img src="${r.imageUrl}" width="60"/></td>
-        </tr>
-      `;
+    // Modal handlers & view/edit (เหมือนเดิม)
+    const modal = document.getElementById("modal");
+    const modalContent = document.getElementById("modalContent");
+    const closeModal = document.getElementById("closeModal");
+    closeModal.addEventListener("click", () => {
+      modal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
     });
-  });
-</script>
+    window.addEventListener("click", e => {
+      if (e.target === modal) {
+        modal.classList.add("hidden");
+        document.body.classList.remove("overflow-hidden");
+      }
+    });
+
+    function viewRepair(id) {
+      db.ref("repairReports/" + id).once("value").then(snap => {
+        const r = snap.val();
+        modalContent.innerHTML = `
+          <h2 class="text-xl font-bold mb-4">รายละเอียดการแจ้งซ่อม</h2>
+          <p><strong>รหัส:</strong> ${r.deviceId}</p>
+          <p><strong>ชื่อ:</strong> ${r.deviceName}</p>
+          <p><strong>หัวข้อ:</strong> ${r.title}</p>
+          <p><strong>รายละเอียด:</strong> ${r.details}</p>
+          <p><strong>สถานะ:</strong> ${r.status}</p>
+          <p><strong>ผู้รับผิดชอบ:</strong> ${r.responsible || "-"}</p>
+          <p><strong>ส่งซ่อมวันที่:</strong> ${formatDate(r.sendDate)}</p>
+          <p><strong>ที่อยู่:</strong> ${r.location || "-"}</p>
+          <p><strong>วันที่รับคืน:</strong> ${r.returnDate ? formatDate(r.returnDate) : "-"}</p>
+          <p><strong>การแก้ไข:</strong> ${r.solution || "-"}</p>
+          <p><strong>ค่าใช้จ่าย:</strong> ${r.cost || "-"}</p>
+          <p><strong>รูปหลังซ่อม:</strong><br>
+            ${r.imageAfter ? `<img src="${r.imageAfter}" class="mt-2 max-w-full rounded">` : "ไม่มี"}
+          </p>
+        `;
+        modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+      });
+    }
+
+    function editRepair(id) {
+      db.ref("repairReports/" + id).once("value").then(snap => {
+        const d = snap.val();
+        modalContent.innerHTML = `
+          <h2 class="text-xl font-bold mb-4">อัปเดตการแจ้งซ่อม</h2>
+          <form id="updateForm" class="space-y-3">
+            <input type="hidden" id="repairId" value="${id}">
+            <input id="status" value="${d.status || ''}" placeholder="สถานะ" class="w-full p-2 border rounded">
+            <input id="responsible" value="${d.responsible || ''}" placeholder="ผู้รับผิดชอบ" class="w-full p-2 border rounded">
+            <input id="sendDate" value="${d.sendDate || ''}" type="date" class="w-full p-2 border rounded">
+            <input id="location" value="${d.location || ''}" placeholder="ที่อยู่" class="w-full p-2 border rounded">
+            <input id="returnDate" value="${d.returnDate || ''}" type="date" class="w-full p-2 border rounded">
+            <textarea id="solution" class="w-full p-2 border rounded" placeholder="การแก้ไข">${d.solution || ''}</textarea>
+            <input id="cost" value="${d.cost || ''}" placeholder="ค่าใช้จ่าย" class="w-full p-2 border rounded">
+            <input id="imageAfter" value="${d.imageAfter || ''}" placeholder="URL รูปหลังซ่อม" class="w-full p-2 border rounded">
+            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">💾 บันทึก</button>
+          </form>
+        `;
+        modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+        document.getElementById("updateForm").addEventListener("submit", e => {
+          e.preventDefault();
+          const id2 = document.getElementById("repairId").value;
+          db.ref("repairReports/" + id2).update({
+            status: document.getElementById("status").value,
+            responsible: document.getElementById("responsible").value,
+            sendDate: document.getElementById("sendDate").value,
+            location: document.getElementById("location").value,
+            returnDate: document.getElementById("returnDate").value,
+            solution: document.getElementById("solution").value,
+            cost: document.getElementById("cost").value,
+            imageAfter: document.getElementById("imageAfter").value
+          }).then(() => {
+            alert("✅ อัปเดตเรียบร้อย");
+            modal.classList.add("hidden");
+            document.body.classList.remove("overflow-hidden");
+            // No need to manually call renderTablePage(); on() listener will update automatically
+          });
+        });
+      });
+    }
+
+    // Notify via LINE OA
+    function notifyLine(userId, userName, list) {
+      const message = `📦 คุณ ${userName} กรุณาคืนอุปกรณ์: ${list}`;
+      fetch("https://script.google.com/macros/s/AKfycbxgGncjm0mJlbxYgQh5z4kvfbfefUniF_VKA_gcItazeNS0B5H56CyI5UiBDJCvAnFk_w/exec", {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, message })
+      });
+    }
+  </script>
 
 </body>
+
 </html>
