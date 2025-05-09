@@ -159,9 +159,9 @@
         if (d.status === "กำลังใช้งาน" && d.lastUser.includes(userName)) {
           hasData = true;
           tbody.innerHTML += `
-            <tr>
-              <td class="py-2 px-4 border">${d.deviceId}</td>
-              <td class="py-2 px-4 border">${d.deviceName}</td>
+            <tr class="min-h-40">
+              <td class="py-2 px-4 text-sm border">${d.deviceId}</td>
+              <td class="py-2 px-4 text-sm border">${d.deviceName}</td>
             </tr>`;
         }
       });
