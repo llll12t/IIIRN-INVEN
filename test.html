@@ -187,7 +187,7 @@
     function tick(video) {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
         const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth;canvas.height = video.videoHeight;
         canvas.getContext("2d").drawImage(video,0,0);
         const code = jsQR(canvas.getContext("2d").getImageData(0,0,canvas.width,canvas.height).data, canvas.width, canvas.height);
         if (code) handleScanResult(code.data.trim());
@@ -195,7 +195,7 @@
       if (video.srcObject) requestAnimationFrame(()=>tick(video));
     }
 
-    // ปรับ handleScanResult ให้กรองชื่ออุปกรณ์
+    // ปรับ handleScanResult ให้กรองชื่ออุปกรณ์และสถานะ
     async function handleScanResult(deviceId) {
       const statusEl = document.getElementById(
         currentMode === "borrow" ? "scanStatusBorrow" : "scanStatusReturn"
@@ -208,16 +208,23 @@
       }
       const dev = snap.val();
 
-      // ไม่เพิ่มถ้าไม่มีชื่ออุปกรณ์ หรือชื่อเป็นเว้นวรรค
+      // กรองอุปกรณ์ที่ไม่มีชื่อ
       if (!dev.deviceName || !dev.deviceName.trim()) {
         statusEl.textContent = `⚠️ ไม่พบชื่ออุปกรณ์สำหรับรหัส: ${deviceId}`;
         return;
       }
-      if (currentMode === "borrow" && dev.status === "กำลังใช้งาน") {
-        statusEl.textContent = `⚠️ ${deviceId} (${dev.deviceName}) ถูกยืมอยู่แล้ว`;
-        return;
-      }
 
+      // ถ้าโหมดยืม ให้เช็กสถานะก่อน
+      if (currentMode === "borrow") {
+        // ยืมได้เฉพาะเมื่อ status === "พร้อมใช้งาน"
+        if (dev.status !== "พร้อมใช้งาน") {
+          statusEl.textContent = `⚠️ ${deviceId} (${dev.deviceName}) ไม่สามารถยืมได้ (สถานะ: ${dev.status})`;
+          return;
+        }
+      }
+      // ถ้าโหมดคืน ก็เช็กเฉพาะถ้าไม่ใช่ borrow mode ไม่ต้องกรองเพิ่ม
+
+      // เพิ่มลงตะกร้า
       if (!basket.some(item => item.id === deviceId)) {
         basket.push({ id: deviceId, name: dev.deviceName });
       }
