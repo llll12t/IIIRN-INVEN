@@ -1,12 +1,3 @@
-**Modifying date and timestamp format**
-
-The user wants to ensure that once the submission succeeds, the window should be closed. They also want a timestamp for when a repair is saved. Here's what I'll do: I'll include both a "dateTime" and "timestamp." We are already using `.toISOString()` to capture the date, so I’ll modify the record to have both fields. We could use `firebase.database.ServerValue.TIMESTAMP` for a server-based timestamp or simply stick with the `ISOString` format — both options make sense. Let's use both for better flexibility.
-
-
-คิดเป็นเวลา 14 วินาที
-
-
-```html
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -222,4 +213,4 @@ The user wants to ensure that once the submission succeeds, the window should be
   </script>
 </body>
 </html>
-```
+
