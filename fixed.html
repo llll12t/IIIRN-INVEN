@@ -163,6 +163,8 @@
       }
 
       await db.ref(`repairReports/${id}`).set({ id, date, reporterName, userIdLine, deviceId, deviceName, title, details, status: 'รอซ่อม', imageUrl });
+ // **อัปเดตสถานะอุปกรณ์เป็น "ส่งซ่อม"**
+      await db.ref(`devices/${deviceId}`).update({  status: 'ส่งซ่อม', lastUser: reporterName, lastUserId: userIdLine  });
       document.getElementById('statusText').textContent = '✅ แจ้งซ่อมเรียบร้อยแล้ว';
     }
   </script>
