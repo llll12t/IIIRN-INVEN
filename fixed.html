@@ -1,7 +1,10 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
+
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>แจ้งซ่อมอุปกรณ์</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Tailwind CSS -->
@@ -158,7 +161,7 @@
 
       let imageUrl = '';
       if (file) {
-        const snap = await storage.ref(`repair_images/${id}`).put(file);
+        const snap = await storage.ref(`repair_images/${id}`).put(file, { contentType: file.type });
         imageUrl = await snap.ref.getDownloadURL();
       }
 
