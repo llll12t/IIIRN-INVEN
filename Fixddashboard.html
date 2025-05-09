@@ -64,7 +64,6 @@
           <table class="min-w-full table-fixed rounded-lg overflow-hidden">
             <thead class="bg-black">
               <tr>
-                <th class="py-2 px-4 text-left text-white text-sm">วันที่ส่งซ่อม</th>
                 <th class="w-24 py-2 px-4 text-left text-white text-sm">รหัส</th>
                 <th class="w-36 py-2 px-4 text-left text-white text-sm">ชื่อ</th>
                 <th class="w-48 py-2 px-4 text-left text-white text-sm">หัวข้อ</th>
@@ -288,7 +287,6 @@
       pageData.forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td class="py-2 px-4 w-20">${formatDate(r.sendDate)}</td>
           <td class="py-2 px-4">${r.deviceId}</td>
           <td class="py-2 px-4">${r.deviceName}</td>
           <td class="py-2 px-4">${r.title}</td>
